@@ -2,12 +2,11 @@
 Spec and design of the zebra-grpc scanner functionality
 
 
-## Version 0.5 of the design diagram done by the Zebra team:
+## Design diagram (v0.6):
 
 ```mermaid
 flowchart TD
     zebra-scan([zebra-scan]) --> |Service|requests/responses(Requests / Responses\n#8182)
-
     zebra-node-services([zebra-node-services]) ---> |Request and response type signatures|requests/responses(Requests / Responses\n#8182)
     requests/responses ---> |Service call|info[(Info\n#8162)]
     requests/responses ---> |Service call|results[(Results\n#8205)]
@@ -30,6 +29,7 @@ flowchart TD
     register ----> scan
     results ----> scan
     subscribe ----> scan
+    clear ----> |Not yet implemented|scan
     scan(scan\n#8256) ---> |gRPC push interface|zebra-grpc
     status ----> getstatus
     getstatus(getstatus\n#8258) ----> |gRPC method|zebra-grpc
@@ -49,47 +49,47 @@ flowchart TD
     testing ---> |grpcurl|manual(Manual testing\nDone with each grpc method impl)
 
     subgraph commands [Interaction between the services and the Scan Task]
-    zebrad -..-> |Scan keys in the config|start-scan-task{{Start scan Task}}
-    register -.-> start-scan-task
-    delete -..-> stop-scan-task{{Stop scan task}}
-    subscribe -..-> subscribe-scan-task{{Subscribe scan task}}
-    zebra-scan --> scan-task{{Scan Task}}
-    scan-task --> subscribe-scan-task
-    scan-task --> start-scan-task
-    scan-task --> stop-scan-task
-    scan-task-refactor(Scan task refactor \n#8250) ----> scan-task
+        zebrad -..-> |Scan keys in the config|start-scan-task{{Start scan Task}}
+        register -.-> start-scan-task
+        delete -..-> stop-scan-task{{Stop scan task}}
+        subscribe -..-> subscribe-scan-task{{Subscribe scan task}}
+        zebra-scan --> scan-task{{Scan Task}}
+        scan-task --> subscribe-scan-task
+        scan-task --> start-scan-task
+        scan-task --> stop-scan-task
+        scan-task-refactor(Scan task refactor \n#8250) ----> scan-task
     end
 
-    style zebra-scan fill:#C27BA0
-    style zebra-node-services fill:#C27BA0
-    style requests/responses fill:#C27BA0
-    style info fill:#C27BA0
-    style getinfo fill:#C27BA0
-    style results fill: #C27BA0
-    style getresults fill: #C27BA0
-    style register fill: #C27BA0
-    style registerkeys fill: #C27BA0
-    style zebra-grpc fill:#C27BA0
-    style delete fill:#C27BA0
-    style clear fill:#C27BA0
-    style deletekeys fill:#C27BA0
-    style clearresults fill:#C27BA0
-    style subscribe fill: #C27BA0
-    style zebrad fill: #C27BA0
-    style scan fill:#C27BA0
+    %% color of the nodes
+    style zebra-scan fill:#8856eb
+    style zebra-node-services fill:#8856eb
+    style requests/responses fill:#8856eb
+    style info fill:#8856eb
+    style getinfo fill:#8856eb
+    style results fill: #8856eb
+    style getresults fill: #8856eb
+    style register fill: #8856eb
+    style registerkeys fill: #8856eb
+    style zebra-grpc fill:#8856eb
+    style delete fill:#8856eb
+    style clear fill:#8856eb
+    style deletekeys fill:#8856eb
+    style clearresults fill:#8856eb
+    style subscribe fill: #8856eb
+    style zebrad fill: #8856eb
+    style scan fill:#8856eb
     
-    style config fill:#C27BA0
-    style testing fill:#C27BA0
+    style config fill:#8856eb
+    style testing fill:#8856eb
 
-    style scan-task fill:#C27BA0
-    style start-scan-task fill:#C27BA0
-    style stop-scan-task fill:#C27BA0
-    style subscribe-scan-task fill:#C27BA0
+    style scan-task fill:#8856eb
+    style start-scan-task fill:#8856eb
+    style stop-scan-task fill:#8856eb
+    style subscribe-scan-task fill:#8856eb
 
-    style manual fill:#0f0
-    style acceptance fill:#0f0
-    style snapshots fill:#0f0
-    style grpc-unit fill:#0f0
-    style service-unit fill:#0f0
-    style scan-task-refactor fill:#0f0
+    style manual fill:#8856eb
+    style acceptance fill:#238636
+    style snapshots fill:#8856eb
+    style grpc-unit fill:#8856eb
+    style service-unit fill:#8856eb
 ```
