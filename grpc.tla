@@ -35,6 +35,7 @@ begin
         return;
 end procedure;
 
+\* The `get_info` grpc method.
 procedure get_info()
 begin
     InfoService:
@@ -153,13 +154,13 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "57788cf3" /\ chksum(tla) = "e7d954f9")
+\* BEGIN TRANSLATION (chksum(pcal) = "57788cf3" /\ chksum(tla) = "970d6406")
 \* Parameter key of procedure add_config_keys at line 31 col 27 changed to key_
-\* Parameter key of procedure get_results at line 46 col 23 changed to key_g
-\* Parameter key of procedure register_keys at line 58 col 25 changed to key_r
-\* Parameter key of procedure delete_keys at line 68 col 23 changed to key_d
-\* Parameter key of procedure clear_results at line 78 col 25 changed to key_c
-\* Parameter key of procedure subscribe at line 86 col 21 changed to key_s
+\* Parameter key of procedure get_results at line 47 col 23 changed to key_g
+\* Parameter key of procedure register_keys at line 59 col 25 changed to key_r
+\* Parameter key of procedure delete_keys at line 69 col 23 changed to key_d
+\* Parameter key of procedure clear_results at line 79 col 25 changed to key_c
+\* Parameter key of procedure subscribe at line 87 col 21 changed to key_s
 CONSTANT defaultInitValue
 VARIABLES scan_tasks, response, scan_task_status, key_to_be_added_or_deleted, 
           pc, stack
@@ -473,5 +474,5 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 =============================================================================
 \* Modification History
-\* Last modified Thu Feb 29 20:16:27 UYT 2024 by alfredo
+\* Last modified Thu Feb 29 20:39:40 UYT 2024 by alfredo
 \* Created Wed Feb 21 10:40:53 UYT 2024 by alfredo
