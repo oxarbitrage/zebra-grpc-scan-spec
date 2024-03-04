@@ -1,5 +1,5 @@
 -------------------------------- MODULE grpc --------------------------------
-EXTENDS TLC, Integers, Sequences, Json, Randomization
+EXTENDS TLC, Integers, Sequences, Randomization
 
 CONSTANT ConfigViewingKey \* Sequence of keys to be added to the scan task from the config file.
 CONSTANT GrpcViewingKey \* Sequence of keys to be added to the scan task by calling grpc methods.
@@ -12,7 +12,6 @@ clear_response == [empty |-> {}] \* A fixed response to `Clear`.
 subscribe_response == [empty |-> {}] \* A fixed response to `Subscribe`. TODO: which should be a channel with updates.
 status_response == [empty |-> {}] \* A fixed response to `Status`. TODO: which should have some data from the scan task for the key.
 
-
 scan_task_statuses == {"waiting", "adding", "deleting"} \* The set of statuses a scan task can be on at any given time.
 
 (*--algorithm grpc
@@ -22,7 +21,7 @@ variables
     scan_task_status = "waiting"; \* The status of the scan task, initially listening
     key_to_be_added_or_deleted = ""; \* The key to be added or deleted to/from the scan task at a given instant, initially empty.
     
-    service_request = "nada";
+    service_request = "none"; \* The current service request flag.
 define
   TypeInvariant ==
     /\ response \in STRING
@@ -106,33 +105,33 @@ begin
   Services:
     if service_request = "info" then
         Info:
-            response := ToJson(info_response);
+            response := info_response;
     elsif service_request = "results" then
         Results:
             if key \in scan_tasks then
-                response := ToJson(results_response);
+                response := results_response;
             else
-                response := ToJson("error");
+                response := "error";
             end if;
     elsif service_request = "clear" then
         Clear:
-            response := ToJson(clear_response);
+            response := clear_response;
     elsif service_request = "status" then
         Status:
-            response := ToJson(clear_response);
+            response := clear_response;
     elsif service_request = "register" then
         Register:
             key_to_be_added_or_deleted := key;
             scan_task_status := "adding";
-            response := ToJson(register_response);
+            response := register_response;
     elsif service_request = "delete" then
         Delete:
             key_to_be_added_or_deleted := key;
             scan_task_status := "deleting";
-            response := ToJson(delete_response);
+            response := delete_response;
     elsif service_request = "subscribe" then
         Subscribe:
-            response := ToJson(subscribe_response);
+            response := subscribe_response;
     else 
         skip;
     end if;
@@ -186,14 +185,14 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "5e9f76be" /\ chksum(tla) = "f5bf7196")
-\* Label ResultsServiceRequest of procedure get_results at line 54 col 9 changed to ResultsServiceRequest_
-\* Label RegisterServiceRequest of procedure register_keys at line 78 col 9 changed to RegisterServiceRequest_
-\* Parameter key of procedure add_config_keys at line 35 col 27 changed to key_
-\* Parameter key of procedure get_results at line 51 col 23 changed to key_g
-\* Parameter key of procedure clear_results at line 59 col 25 changed to key_c
-\* Parameter key of procedure register_keys at line 75 col 25 changed to key_r
-\* Parameter key of procedure delete_keys at line 83 col 23 changed to key_d
+\* BEGIN TRANSLATION (chksum(pcal) = "cd4901ca" /\ chksum(tla) = "ba4b2834")
+\* Label ResultsServiceRequest of procedure get_results at line 53 col 9 changed to ResultsServiceRequest_
+\* Label RegisterServiceRequest of procedure register_keys at line 77 col 9 changed to RegisterServiceRequest_
+\* Parameter key of procedure add_config_keys at line 34 col 27 changed to key_
+\* Parameter key of procedure get_results at line 50 col 23 changed to key_g
+\* Parameter key of procedure clear_results at line 58 col 25 changed to key_c
+\* Parameter key of procedure register_keys at line 74 col 25 changed to key_r
+\* Parameter key of procedure delete_keys at line 82 col 23 changed to key_d
 CONSTANT defaultInitValue
 VARIABLES scan_tasks, response, scan_task_status, key_to_be_added_or_deleted, 
           service_request, pc, stack
@@ -217,7 +216,7 @@ Init == (* Global variables *)
         /\ response = ""
         /\ scan_task_status = "waiting"
         /\ key_to_be_added_or_deleted = ""
-        /\ service_request = "nada"
+        /\ service_request = "none"
         (* Procedure add_config_keys *)
         /\ key_ = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure get_results *)
@@ -374,7 +373,7 @@ Services == /\ pc["SERVICES"] = "Services"
                             key_, key_g, key_c, key_r, key_d, key >>
 
 Info == /\ pc["SERVICES"] = "Info"
-        /\ response' = ToJson(info_response)
+        /\ response' = info_response
         /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
         /\ UNCHANGED << scan_tasks, scan_task_status, 
                         key_to_be_added_or_deleted, service_request, stack, 
@@ -382,22 +381,22 @@ Info == /\ pc["SERVICES"] = "Info"
 
 Results == /\ pc["SERVICES"] = "Results"
            /\ IF key["SERVICES"] \in scan_tasks
-                 THEN /\ response' = ToJson(results_response)
-                 ELSE /\ response' = ToJson("error")
+                 THEN /\ response' = results_response
+                 ELSE /\ response' = "error"
            /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
            /\ UNCHANGED << scan_tasks, scan_task_status, 
                            key_to_be_added_or_deleted, service_request, stack, 
                            key_, key_g, key_c, key_r, key_d, key >>
 
 Clear == /\ pc["SERVICES"] = "Clear"
-         /\ response' = ToJson(clear_response)
+         /\ response' = clear_response
          /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
          /\ UNCHANGED << scan_tasks, scan_task_status, 
                          key_to_be_added_or_deleted, service_request, stack, 
                          key_, key_g, key_c, key_r, key_d, key >>
 
 Status == /\ pc["SERVICES"] = "Status"
-          /\ response' = ToJson(clear_response)
+          /\ response' = clear_response
           /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
           /\ UNCHANGED << scan_tasks, scan_task_status, 
                           key_to_be_added_or_deleted, service_request, stack, 
@@ -406,7 +405,7 @@ Status == /\ pc["SERVICES"] = "Status"
 Register == /\ pc["SERVICES"] = "Register"
             /\ key_to_be_added_or_deleted' = key["SERVICES"]
             /\ scan_task_status' = "adding"
-            /\ response' = ToJson(register_response)
+            /\ response' = register_response
             /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
             /\ UNCHANGED << scan_tasks, service_request, stack, key_, key_g, 
                             key_c, key_r, key_d, key >>
@@ -414,13 +413,13 @@ Register == /\ pc["SERVICES"] = "Register"
 Delete == /\ pc["SERVICES"] = "Delete"
           /\ key_to_be_added_or_deleted' = key["SERVICES"]
           /\ scan_task_status' = "deleting"
-          /\ response' = ToJson(delete_response)
+          /\ response' = delete_response
           /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
           /\ UNCHANGED << scan_tasks, service_request, stack, key_, key_g, 
                           key_c, key_r, key_d, key >>
 
 Subscribe == /\ pc["SERVICES"] = "Subscribe"
-             /\ response' = ToJson(subscribe_response)
+             /\ response' = subscribe_response
              /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
              /\ UNCHANGED << scan_tasks, scan_task_status, 
                              key_to_be_added_or_deleted, service_request, 
@@ -584,5 +583,5 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 =============================================================================
 \* Modification History
-\* Last modified Sun Mar 03 10:33:14 UYT 2024 by alfredo
+\* Last modified Mon Mar 04 16:31:12 UYT 2024 by alfredo
 \* Created Wed Feb 21 10:40:53 UYT 2024 by alfredo
