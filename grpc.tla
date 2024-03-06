@@ -139,27 +139,44 @@ begin
             if key_to_be_served \in scan_tasks then
                 response := results_response;
             else
-                response := "Error";
+                response := "Error: key not found.";
             end if;
     elsif service_request = "clear" then
         Clear:
-            response := clear_response;
+            if key_to_be_served \in scan_tasks then
+                response := clear_response;
+            else
+                response := "Error: key not found.";
+            end if;
     elsif service_request = "status" then
         Status:
-            response := clear_response;
+            if key_to_be_served \in scan_tasks then
+                response := status_response;
+            else
+                response := "Error: key not found.";
+            end if;
     elsif service_request = "register" then
         Register:
-            \*key_to_be_added_or_deleted := key;
-            scan_task_status := "adding";
-            response := register_response;
+            if key_to_be_served \in scan_tasks then
+                response := "Error: key already in scan task.";
+            else
+                scan_task_status := "adding";
+                response := register_response;
+            end if;
     elsif service_request = "delete" then
-        Delete:
-            \*key_to_be_added_or_deleted := key;
+        if key_to_be_served \in scan_tasks then
             scan_task_status := "deleting";
             response := delete_response;
+        else
+            response := "Error: key not found.";
+        end if;
     elsif service_request = "subscribe" then
         Subscribe:
+        if key_to_be_served \in scan_tasks then
             response := subscribe_response;
+        else
+            response := "Error: key not found.";
+        end if;
     else 
         skip;
     end if;
@@ -214,7 +231,7 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "3d9b5bc2" /\ chksum(tla) = "f3d0a8bc")
+\* BEGIN TRANSLATION (chksum(pcal) = "8b2aa5fd" /\ chksum(tla) = "3263055")
 \* Parameter key of procedure add_config_keys at line 56 col 27 changed to key_
 \* Parameter key of procedure get_results at line 73 col 23 changed to key_g
 \* Parameter key of procedure clear_results at line 82 col 25 changed to key_c
@@ -385,23 +402,38 @@ scan(self) == RegisterServiceRequestFromScan(self)
 Services == /\ pc["SERVICES"] = "Services"
             /\ IF service_request = "info"
                   THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Info"]
+                       /\ UNCHANGED << response, scan_task_status >>
                   ELSE /\ IF service_request = "results"
                              THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Results"]
+                                  /\ UNCHANGED << response, scan_task_status >>
                              ELSE /\ IF service_request = "clear"
                                         THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Clear"]
+                                             /\ UNCHANGED << response, 
+                                                             scan_task_status >>
                                         ELSE /\ IF service_request = "status"
                                                    THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Status"]
+                                                        /\ UNCHANGED << response, 
+                                                                        scan_task_status >>
                                                    ELSE /\ IF service_request = "register"
                                                               THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Register"]
+                                                                   /\ UNCHANGED << response, 
+                                                                                   scan_task_status >>
                                                               ELSE /\ IF service_request = "delete"
-                                                                         THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Delete"]
+                                                                         THEN /\ IF key_to_be_served \in scan_tasks
+                                                                                    THEN /\ scan_task_status' = "deleting"
+                                                                                         /\ response' = delete_response
+                                                                                    ELSE /\ response' = "Error: key not found."
+                                                                                         /\ UNCHANGED scan_task_status
+                                                                              /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
                                                                          ELSE /\ IF service_request = "subscribe"
                                                                                     THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Subscribe"]
                                                                                     ELSE /\ TRUE
                                                                                          /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
-            /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                            key_to_be_served, service_request, stack, key_, 
-                            key_g, key_c, key_ge, key_r, key_d, key >>
+                                                                              /\ UNCHANGED << response, 
+                                                                                              scan_task_status >>
+            /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, 
+                            stack, key_, key_g, key_c, key_ge, key_r, key_d, 
+                            key >>
 
 Info == /\ pc["SERVICES"] = "Info"
         /\ response' = info_response
@@ -413,50 +445,52 @@ Info == /\ pc["SERVICES"] = "Info"
 Results == /\ pc["SERVICES"] = "Results"
            /\ IF key_to_be_served \in scan_tasks
                  THEN /\ response' = results_response
-                 ELSE /\ response' = "Error"
+                 ELSE /\ response' = "Error: key not found."
            /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
            /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                            service_request, stack, key_, key_g, key_c, key_ge, 
                            key_r, key_d, key >>
 
 Clear == /\ pc["SERVICES"] = "Clear"
-         /\ response' = clear_response
+         /\ IF key_to_be_served \in scan_tasks
+               THEN /\ response' = clear_response
+               ELSE /\ response' = "Error: key not found."
          /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
          /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                          service_request, stack, key_, key_g, key_c, key_ge, 
                          key_r, key_d, key >>
 
 Status == /\ pc["SERVICES"] = "Status"
-          /\ response' = clear_response
+          /\ IF key_to_be_served \in scan_tasks
+                THEN /\ response' = status_response
+                ELSE /\ response' = "Error: key not found."
           /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
           /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                           service_request, stack, key_, key_g, key_c, key_ge, 
                           key_r, key_d, key >>
 
 Register == /\ pc["SERVICES"] = "Register"
-            /\ scan_task_status' = "adding"
-            /\ response' = register_response
+            /\ IF key_to_be_served \in scan_tasks
+                  THEN /\ response' = "Error: key already in scan task."
+                       /\ UNCHANGED scan_task_status
+                  ELSE /\ scan_task_status' = "adding"
+                       /\ response' = register_response
             /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
             /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, 
                             stack, key_, key_g, key_c, key_ge, key_r, key_d, 
                             key >>
 
-Delete == /\ pc["SERVICES"] = "Delete"
-          /\ scan_task_status' = "deleting"
-          /\ response' = delete_response
-          /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
-          /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, stack, 
-                          key_, key_g, key_c, key_ge, key_r, key_d, key >>
-
 Subscribe == /\ pc["SERVICES"] = "Subscribe"
-             /\ response' = subscribe_response
+             /\ IF key_to_be_served \in scan_tasks
+                   THEN /\ response' = subscribe_response
+                   ELSE /\ response' = "Error: key not found."
              /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
              /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                              service_request, stack, key_, key_g, key_c, 
                              key_ge, key_r, key_d, key >>
 
 services == Services \/ Info \/ Results \/ Clear \/ Status \/ Register
-               \/ Delete \/ Subscribe
+               \/ Subscribe
 
 AddTask == /\ pc["SCAN TASK"] = "AddTask"
            /\ IF scan_task_status = "adding"
