@@ -3,10 +3,10 @@ EXTENDS TLC, Integers, Sequences, Randomization
 
 \* CONFIGURATION CONSTANTS:
 
-\* Key as string to be added to the scan task from the config file.
-CONSTANT ConfigViewingKey
-\* Key as string to be added to the scan task by calling grpc methods.
-CONSTANT GrpcViewingKey
+\* The set of keys as strings to be added to the scan task from the config file.
+CONSTANT ConfigViewingKeys
+\* The set of keys as strings to be added to the scan task by calling grpc methods.
+CONSTANT GrpcViewingKeys
 
 \* GLOBAL VARIABLES:
 
@@ -46,19 +46,25 @@ variables
 \* The type invariants.
 define
   TypeInvariant ==
+    \* The response is always in the STRING domain
     /\ response \in STRING
+    \* The scan task status is always in the scan task statuses set.
     /\ scan_task_status \in scan_task_statuses
+    \* The key to be served is always in the STRING domain.
     /\ key_to_be_served \in STRING
+    \* The service request is always in the service requests set.
     /\ service_request \in service_requests
 end define;
 
 \* Call the scan task to add keys coming from the config file.
-procedure add_config_keys(key)
+procedure add_config_keys(keys)
 begin
     AddConfigKeys:
-        key_to_be_served := key;
-        scan_task_status := "adding";
-        return;
+        with key \in keys do
+            key_to_be_served := key;
+            scan_task_status := "adding";
+            return;
+        end with;
 end procedure;
 
 \* The `get_info` grpc method.
@@ -70,60 +76,79 @@ begin
 end procedure;
 
 \* The `get_results` grpc method.
-procedure get_results(key)
+procedure get_results(keys)
 begin
     ResultsServiceRequest:
-        key_to_be_served := key;
-        service_request := "results";
-        return;
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "results";
+            return;
+        end with;
 end procedure;
 
 \* The `clear_results` grpc method.
-procedure clear_results(key)
+procedure clear_results(keys)
 begin
     ClearServiceRequest:
-        key_to_be_served := key;
-        service_request := "clear";
-        return;
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "clear";
+            return;
+        end with;
 end procedure;
 
 \* The `get_status` grpc method.
-procedure get_status(key)
+procedure get_status(keys)
 begin
     StatusServiceRequest:
-        key_to_be_served := key;
-        service_request := "status";
-        return;
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "status";
+            return;
+        end with;
 end procedure;
 
 \* The `register_keys` grpc method.
-procedure register_keys(key)
+procedure register_keys(keys)
 begin
     RegisterServiceRequest:
-        key_to_be_served := key;
-        service_request := "register";
-        return;
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "register";
+            return;
+        end with;
 end procedure;
 
 \* The `delete_keys` grpc method.
-procedure delete_keys(key)
+procedure delete_keys(keys)
 begin
     DeleteServiceRequest:
-        key_to_be_served := key;
-        service_request := "delete";
-        return;
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "delete";
+            return;
+        end with;
 end procedure;
 
 \* The `scan` grpc method.
-procedure scan(key)
+\* The method call 3 services one next to the other.
+procedure scan(keys)
 begin
     RegisterServiceRequestFromScan:
-        key_to_be_served := key;
-        service_request := "register";
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "register";
+        end with;
     ResultsServiceRequestFromScan:
-        service_request := "results";
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "results";
+        end with;
     SubscribeServiceRequestFromScan:
-        service_request := "subscribe";
+        with key \in keys do
+            key_to_be_served := key;
+            service_request := "subscribe";
+        end with;
         return;
 end procedure;
 
@@ -203,27 +228,27 @@ end process;
 process Main = "MAIN"
 begin
     ConfigGuard:
-        if ConfigViewingKey # "" then
+        if ConfigViewingKeys # {} then
             FromZebradConfig:
-                either call add_config_keys(ConfigViewingKey); or skip; end either;
+                either call add_config_keys(ConfigViewingKeys); or skip; end either;
         end if;
     ListeningGuard:
-        if GrpcViewingKey # "" then
+        if GrpcViewingKeys # {} then
             ListeningMode:
                 either GetInfoCall:
                     call get_info();
                 or GetResultsCall:
-                    call get_results(GrpcViewingKey);
+                    call get_results(GrpcViewingKeys);
                 or RegisterKeysCall:
-                    call register_keys(GrpcViewingKey);
+                    call register_keys(GrpcViewingKeys);
                 or DeleteKeysCall:
-                    call delete_keys(GrpcViewingKey);
+                    call delete_keys(GrpcViewingKeys);
                 or ClearResultsCall:
-                    call clear_results(GrpcViewingKey);
+                    call clear_results(GrpcViewingKeys);
                 or ScanCall:
-                    call scan(GrpcViewingKey);
+                    call scan(GrpcViewingKeys);
                 or GetStatusCall:
-                    call get_status(GrpcViewingKey);
+                    call get_status(GrpcViewingKeys);
                 end either;
             End:
                 skip;
@@ -231,29 +256,33 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "8b2aa5fd" /\ chksum(tla) = "3263055")
-\* Parameter key of procedure add_config_keys at line 56 col 27 changed to key_
-\* Parameter key of procedure get_results at line 73 col 23 changed to key_g
-\* Parameter key of procedure clear_results at line 82 col 25 changed to key_c
-\* Parameter key of procedure get_status at line 91 col 22 changed to key_ge
-\* Parameter key of procedure register_keys at line 100 col 25 changed to key_r
-\* Parameter key of procedure delete_keys at line 109 col 23 changed to key_d
+\* BEGIN TRANSLATION (chksum(pcal) = "dbd89f8b" /\ chksum(tla) = "d99a1579")
+\* Parameter keys of procedure add_config_keys at line 60 col 27 changed to keys_
+\* Parameter keys of procedure get_results at line 79 col 23 changed to keys_g
+\* Parameter keys of procedure clear_results at line 90 col 25 changed to keys_c
+\* Parameter keys of procedure get_status at line 101 col 22 changed to keys_ge
+\* Parameter keys of procedure register_keys at line 112 col 25 changed to keys_r
+\* Parameter keys of procedure delete_keys at line 123 col 23 changed to keys_d
 CONSTANT defaultInitValue
 VARIABLES scan_tasks, response, scan_task_status, key_to_be_served, 
           service_request, pc, stack
 
 (* define statement *)
 TypeInvariant ==
+
   /\ response \in STRING
+
   /\ scan_task_status \in scan_task_statuses
+
   /\ key_to_be_served \in STRING
+
   /\ service_request \in service_requests
 
-VARIABLES key_, key_g, key_c, key_ge, key_r, key_d, key
+VARIABLES keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, keys
 
 vars == << scan_tasks, response, scan_task_status, key_to_be_served, 
-           service_request, pc, stack, key_, key_g, key_c, key_ge, key_r, 
-           key_d, key >>
+           service_request, pc, stack, keys_, keys_g, keys_c, keys_ge, keys_r, 
+           keys_d, keys >>
 
 ProcSet == {"SERVICES"} \cup {"SCAN TASK"} \cup {"MAIN"}
 
@@ -264,32 +293,34 @@ Init == (* Global variables *)
         /\ key_to_be_served = ""
         /\ service_request = "none"
         (* Procedure add_config_keys *)
-        /\ key_ = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys_ = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure get_results *)
-        /\ key_g = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys_g = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure clear_results *)
-        /\ key_c = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys_c = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure get_status *)
-        /\ key_ge = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys_ge = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure register_keys *)
-        /\ key_r = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys_r = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure delete_keys *)
-        /\ key_d = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys_d = [ self \in ProcSet |-> defaultInitValue]
         (* Procedure scan *)
-        /\ key = [ self \in ProcSet |-> defaultInitValue]
+        /\ keys = [ self \in ProcSet |-> defaultInitValue]
         /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = "SERVICES" -> "Services"
                                         [] self = "SCAN TASK" -> "AddTask"
                                         [] self = "MAIN" -> "ConfigGuard"]
 
 AddConfigKeys(self) == /\ pc[self] = "AddConfigKeys"
-                       /\ key_to_be_served' = key_[self]
-                       /\ scan_task_status' = "adding"
-                       /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                       /\ key_' = [key_ EXCEPT ![self] = Head(stack[self]).key_]
-                       /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                       /\ \E key \in keys_[self]:
+                            /\ key_to_be_served' = key
+                            /\ scan_task_status' = "adding"
+                            /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                            /\ keys_' = [keys_ EXCEPT ![self] = Head(stack[self]).keys_]
+                            /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                        /\ UNCHANGED << scan_tasks, response, service_request, 
-                                       key_g, key_c, key_ge, key_r, key_d, key >>
+                                       keys_g, keys_c, keys_ge, keys_r, keys_d, 
+                                       keys >>
 
 add_config_keys(self) == AddConfigKeys(self)
 
@@ -299,101 +330,111 @@ InfoServiceRequest(self) == /\ pc[self] = "InfoServiceRequest"
                             /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                             /\ UNCHANGED << scan_tasks, response, 
                                             scan_task_status, key_to_be_served, 
-                                            key_, key_g, key_c, key_ge, key_r, 
-                                            key_d, key >>
+                                            keys_, keys_g, keys_c, keys_ge, 
+                                            keys_r, keys_d, keys >>
 
 get_info(self) == InfoServiceRequest(self)
 
 ResultsServiceRequest(self) == /\ pc[self] = "ResultsServiceRequest"
-                               /\ key_to_be_served' = key_g[self]
-                               /\ service_request' = "results"
-                               /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                               /\ key_g' = [key_g EXCEPT ![self] = Head(stack[self]).key_g]
-                               /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                               /\ \E key \in keys_g[self]:
+                                    /\ key_to_be_served' = key
+                                    /\ service_request' = "results"
+                                    /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                                    /\ keys_g' = [keys_g EXCEPT ![self] = Head(stack[self]).keys_g]
+                                    /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                                /\ UNCHANGED << scan_tasks, response, 
-                                               scan_task_status, key_, key_c, 
-                                               key_ge, key_r, key_d, key >>
+                                               scan_task_status, keys_, keys_c, 
+                                               keys_ge, keys_r, keys_d, keys >>
 
 get_results(self) == ResultsServiceRequest(self)
 
 ClearServiceRequest(self) == /\ pc[self] = "ClearServiceRequest"
-                             /\ key_to_be_served' = key_c[self]
-                             /\ service_request' = "clear"
-                             /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                             /\ key_c' = [key_c EXCEPT ![self] = Head(stack[self]).key_c]
-                             /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                             /\ \E key \in keys_c[self]:
+                                  /\ key_to_be_served' = key
+                                  /\ service_request' = "clear"
+                                  /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                                  /\ keys_c' = [keys_c EXCEPT ![self] = Head(stack[self]).keys_c]
+                                  /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                              /\ UNCHANGED << scan_tasks, response, 
-                                             scan_task_status, key_, key_g, 
-                                             key_ge, key_r, key_d, key >>
+                                             scan_task_status, keys_, keys_g, 
+                                             keys_ge, keys_r, keys_d, keys >>
 
 clear_results(self) == ClearServiceRequest(self)
 
 StatusServiceRequest(self) == /\ pc[self] = "StatusServiceRequest"
-                              /\ key_to_be_served' = key_ge[self]
-                              /\ service_request' = "status"
-                              /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                              /\ key_ge' = [key_ge EXCEPT ![self] = Head(stack[self]).key_ge]
-                              /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                              /\ \E key \in keys_ge[self]:
+                                   /\ key_to_be_served' = key
+                                   /\ service_request' = "status"
+                                   /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                                   /\ keys_ge' = [keys_ge EXCEPT ![self] = Head(stack[self]).keys_ge]
+                                   /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                               /\ UNCHANGED << scan_tasks, response, 
-                                              scan_task_status, key_, key_g, 
-                                              key_c, key_r, key_d, key >>
+                                              scan_task_status, keys_, keys_g, 
+                                              keys_c, keys_r, keys_d, keys >>
 
 get_status(self) == StatusServiceRequest(self)
 
 RegisterServiceRequest(self) == /\ pc[self] = "RegisterServiceRequest"
-                                /\ key_to_be_served' = key_r[self]
-                                /\ service_request' = "register"
-                                /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                                /\ key_r' = [key_r EXCEPT ![self] = Head(stack[self]).key_r]
-                                /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                                /\ \E key \in keys_r[self]:
+                                     /\ key_to_be_served' = key
+                                     /\ service_request' = "register"
+                                     /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                                     /\ keys_r' = [keys_r EXCEPT ![self] = Head(stack[self]).keys_r]
+                                     /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                                 /\ UNCHANGED << scan_tasks, response, 
-                                                scan_task_status, key_, key_g, 
-                                                key_c, key_ge, key_d, key >>
+                                                scan_task_status, keys_, 
+                                                keys_g, keys_c, keys_ge, 
+                                                keys_d, keys >>
 
 register_keys(self) == RegisterServiceRequest(self)
 
 DeleteServiceRequest(self) == /\ pc[self] = "DeleteServiceRequest"
-                              /\ key_to_be_served' = key_d[self]
-                              /\ service_request' = "delete"
-                              /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                              /\ key_d' = [key_d EXCEPT ![self] = Head(stack[self]).key_d]
-                              /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                              /\ \E key \in keys_d[self]:
+                                   /\ key_to_be_served' = key
+                                   /\ service_request' = "delete"
+                                   /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                                   /\ keys_d' = [keys_d EXCEPT ![self] = Head(stack[self]).keys_d]
+                                   /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                               /\ UNCHANGED << scan_tasks, response, 
-                                              scan_task_status, key_, key_g, 
-                                              key_c, key_ge, key_r, key >>
+                                              scan_task_status, keys_, keys_g, 
+                                              keys_c, keys_ge, keys_r, keys >>
 
 delete_keys(self) == DeleteServiceRequest(self)
 
 RegisterServiceRequestFromScan(self) == /\ pc[self] = "RegisterServiceRequestFromScan"
-                                        /\ key_to_be_served' = key[self]
-                                        /\ service_request' = "register"
+                                        /\ \E key \in keys[self]:
+                                             /\ key_to_be_served' = key
+                                             /\ service_request' = "register"
                                         /\ pc' = [pc EXCEPT ![self] = "ResultsServiceRequestFromScan"]
                                         /\ UNCHANGED << scan_tasks, response, 
                                                         scan_task_status, 
-                                                        stack, key_, key_g, 
-                                                        key_c, key_ge, key_r, 
-                                                        key_d, key >>
+                                                        stack, keys_, keys_g, 
+                                                        keys_c, keys_ge, 
+                                                        keys_r, keys_d, keys >>
 
 ResultsServiceRequestFromScan(self) == /\ pc[self] = "ResultsServiceRequestFromScan"
-                                       /\ service_request' = "results"
+                                       /\ \E key \in keys[self]:
+                                            /\ key_to_be_served' = key
+                                            /\ service_request' = "results"
                                        /\ pc' = [pc EXCEPT ![self] = "SubscribeServiceRequestFromScan"]
                                        /\ UNCHANGED << scan_tasks, response, 
-                                                       scan_task_status, 
-                                                       key_to_be_served, stack, 
-                                                       key_, key_g, key_c, 
-                                                       key_ge, key_r, key_d, 
-                                                       key >>
+                                                       scan_task_status, stack, 
+                                                       keys_, keys_g, keys_c, 
+                                                       keys_ge, keys_r, keys_d, 
+                                                       keys >>
 
 SubscribeServiceRequestFromScan(self) == /\ pc[self] = "SubscribeServiceRequestFromScan"
-                                         /\ service_request' = "subscribe"
+                                         /\ \E key \in keys[self]:
+                                              /\ key_to_be_served' = key
+                                              /\ service_request' = "subscribe"
                                          /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                                         /\ key' = [key EXCEPT ![self] = Head(stack[self]).key]
+                                         /\ keys' = [keys EXCEPT ![self] = Head(stack[self]).keys]
                                          /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                                          /\ UNCHANGED << scan_tasks, response, 
                                                          scan_task_status, 
-                                                         key_to_be_served, 
-                                                         key_, key_g, key_c, 
-                                                         key_ge, key_r, key_d >>
+                                                         keys_, keys_g, keys_c, 
+                                                         keys_ge, keys_r, 
+                                                         keys_d >>
 
 scan(self) == RegisterServiceRequestFromScan(self)
                  \/ ResultsServiceRequestFromScan(self)
@@ -432,15 +473,15 @@ Services == /\ pc["SERVICES"] = "Services"
                                                                               /\ UNCHANGED << response, 
                                                                                               scan_task_status >>
             /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, 
-                            stack, key_, key_g, key_c, key_ge, key_r, key_d, 
-                            key >>
+                            stack, keys_, keys_g, keys_c, keys_ge, keys_r, 
+                            keys_d, keys >>
 
 Info == /\ pc["SERVICES"] = "Info"
         /\ response' = info_response
         /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
         /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
-                        service_request, stack, key_, key_g, key_c, key_ge, 
-                        key_r, key_d, key >>
+                        service_request, stack, keys_, keys_g, keys_c, keys_ge, 
+                        keys_r, keys_d, keys >>
 
 Results == /\ pc["SERVICES"] = "Results"
            /\ IF key_to_be_served \in scan_tasks
@@ -448,8 +489,8 @@ Results == /\ pc["SERVICES"] = "Results"
                  ELSE /\ response' = "Error: key not found."
            /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
            /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
-                           service_request, stack, key_, key_g, key_c, key_ge, 
-                           key_r, key_d, key >>
+                           service_request, stack, keys_, keys_g, keys_c, 
+                           keys_ge, keys_r, keys_d, keys >>
 
 Clear == /\ pc["SERVICES"] = "Clear"
          /\ IF key_to_be_served \in scan_tasks
@@ -457,8 +498,8 @@ Clear == /\ pc["SERVICES"] = "Clear"
                ELSE /\ response' = "Error: key not found."
          /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
          /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
-                         service_request, stack, key_, key_g, key_c, key_ge, 
-                         key_r, key_d, key >>
+                         service_request, stack, keys_, keys_g, keys_c, 
+                         keys_ge, keys_r, keys_d, keys >>
 
 Status == /\ pc["SERVICES"] = "Status"
           /\ IF key_to_be_served \in scan_tasks
@@ -466,8 +507,8 @@ Status == /\ pc["SERVICES"] = "Status"
                 ELSE /\ response' = "Error: key not found."
           /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
           /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
-                          service_request, stack, key_, key_g, key_c, key_ge, 
-                          key_r, key_d, key >>
+                          service_request, stack, keys_, keys_g, keys_c, 
+                          keys_ge, keys_r, keys_d, keys >>
 
 Register == /\ pc["SERVICES"] = "Register"
             /\ IF key_to_be_served \in scan_tasks
@@ -477,8 +518,8 @@ Register == /\ pc["SERVICES"] = "Register"
                        /\ response' = register_response
             /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
             /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, 
-                            stack, key_, key_g, key_c, key_ge, key_r, key_d, 
-                            key >>
+                            stack, keys_, keys_g, keys_c, keys_ge, keys_r, 
+                            keys_d, keys >>
 
 Subscribe == /\ pc["SERVICES"] = "Subscribe"
              /\ IF key_to_be_served \in scan_tasks
@@ -486,8 +527,8 @@ Subscribe == /\ pc["SERVICES"] = "Subscribe"
                    ELSE /\ response' = "Error: key not found."
              /\ pc' = [pc EXCEPT !["SERVICES"] = "Done"]
              /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
-                             service_request, stack, key_, key_g, key_c, 
-                             key_ge, key_r, key_d, key >>
+                             service_request, stack, keys_, keys_g, keys_c, 
+                             keys_ge, keys_r, keys_d, keys >>
 
 services == Services \/ Info \/ Results \/ Clear \/ Status \/ Register
                \/ Subscribe
@@ -503,40 +544,41 @@ AddTask == /\ pc["SCAN TASK"] = "AddTask"
                                  /\ UNCHANGED << scan_tasks, scan_task_status >>
            /\ pc' = [pc EXCEPT !["SCAN TASK"] = "Done"]
            /\ UNCHANGED << response, key_to_be_served, service_request, stack, 
-                           key_, key_g, key_c, key_ge, key_r, key_d, key >>
+                           keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, 
+                           keys >>
 
 scantask == AddTask
 
 ConfigGuard == /\ pc["MAIN"] = "ConfigGuard"
-               /\ IF ConfigViewingKey # ""
+               /\ IF ConfigViewingKeys # {}
                      THEN /\ pc' = [pc EXCEPT !["MAIN"] = "FromZebradConfig"]
                      ELSE /\ pc' = [pc EXCEPT !["MAIN"] = "ListeningGuard"]
                /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                               key_to_be_served, service_request, stack, key_, 
-                               key_g, key_c, key_ge, key_r, key_d, key >>
+                               key_to_be_served, service_request, stack, keys_, 
+                               keys_g, keys_c, keys_ge, keys_r, keys_d, keys >>
 
 FromZebradConfig == /\ pc["MAIN"] = "FromZebradConfig"
-                    /\ \/ /\ /\ key_' = [key_ EXCEPT !["MAIN"] = ConfigViewingKey]
+                    /\ \/ /\ /\ keys_' = [keys_ EXCEPT !["MAIN"] = ConfigViewingKeys]
                              /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "add_config_keys",
                                                                         pc        |->  "ListeningGuard",
-                                                                        key_      |->  key_["MAIN"] ] >>
+                                                                        keys_     |->  keys_["MAIN"] ] >>
                                                                     \o stack["MAIN"]]
                           /\ pc' = [pc EXCEPT !["MAIN"] = "AddConfigKeys"]
                        \/ /\ TRUE
                           /\ pc' = [pc EXCEPT !["MAIN"] = "ListeningGuard"]
-                          /\ UNCHANGED <<stack, key_>>
+                          /\ UNCHANGED <<stack, keys_>>
                     /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                                    key_to_be_served, service_request, key_g, 
-                                    key_c, key_ge, key_r, key_d, key >>
+                                    key_to_be_served, service_request, keys_g, 
+                                    keys_c, keys_ge, keys_r, keys_d, keys >>
 
 ListeningGuard == /\ pc["MAIN"] = "ListeningGuard"
-                  /\ IF GrpcViewingKey # ""
+                  /\ IF GrpcViewingKeys # {}
                         THEN /\ pc' = [pc EXCEPT !["MAIN"] = "ListeningMode"]
                         ELSE /\ pc' = [pc EXCEPT !["MAIN"] = "Done"]
                   /\ UNCHANGED << scan_tasks, response, scan_task_status, 
                                   key_to_be_served, service_request, stack, 
-                                  key_, key_g, key_c, key_ge, key_r, key_d, 
-                                  key >>
+                                  keys_, keys_g, keys_c, keys_ge, keys_r, 
+                                  keys_d, keys >>
 
 ListeningMode == /\ pc["MAIN"] = "ListeningMode"
                  /\ \/ /\ pc' = [pc EXCEPT !["MAIN"] = "GetInfoCall"]
@@ -548,7 +590,8 @@ ListeningMode == /\ pc["MAIN"] = "ListeningMode"
                     \/ /\ pc' = [pc EXCEPT !["MAIN"] = "GetStatusCall"]
                  /\ UNCHANGED << scan_tasks, response, scan_task_status, 
                                  key_to_be_served, service_request, stack, 
-                                 key_, key_g, key_c, key_ge, key_r, key_d, key >>
+                                 keys_, keys_g, keys_c, keys_ge, keys_r, 
+                                 keys_d, keys >>
 
 GetInfoCall == /\ pc["MAIN"] = "GetInfoCall"
                /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "get_info",
@@ -556,81 +599,81 @@ GetInfoCall == /\ pc["MAIN"] = "GetInfoCall"
                                                       \o stack["MAIN"]]
                /\ pc' = [pc EXCEPT !["MAIN"] = "InfoServiceRequest"]
                /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                               key_to_be_served, service_request, key_, key_g, 
-                               key_c, key_ge, key_r, key_d, key >>
+                               key_to_be_served, service_request, keys_, 
+                               keys_g, keys_c, keys_ge, keys_r, keys_d, keys >>
 
 GetResultsCall == /\ pc["MAIN"] = "GetResultsCall"
-                  /\ /\ key_g' = [key_g EXCEPT !["MAIN"] = GrpcViewingKey]
+                  /\ /\ keys_g' = [keys_g EXCEPT !["MAIN"] = GrpcViewingKeys]
                      /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "get_results",
                                                                 pc        |->  "End",
-                                                                key_g     |->  key_g["MAIN"] ] >>
+                                                                keys_g    |->  keys_g["MAIN"] ] >>
                                                             \o stack["MAIN"]]
                   /\ pc' = [pc EXCEPT !["MAIN"] = "ResultsServiceRequest"]
                   /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                                  key_to_be_served, service_request, key_, 
-                                  key_c, key_ge, key_r, key_d, key >>
+                                  key_to_be_served, service_request, keys_, 
+                                  keys_c, keys_ge, keys_r, keys_d, keys >>
 
 RegisterKeysCall == /\ pc["MAIN"] = "RegisterKeysCall"
-                    /\ /\ key_r' = [key_r EXCEPT !["MAIN"] = GrpcViewingKey]
+                    /\ /\ keys_r' = [keys_r EXCEPT !["MAIN"] = GrpcViewingKeys]
                        /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "register_keys",
                                                                   pc        |->  "End",
-                                                                  key_r     |->  key_r["MAIN"] ] >>
+                                                                  keys_r    |->  keys_r["MAIN"] ] >>
                                                               \o stack["MAIN"]]
                     /\ pc' = [pc EXCEPT !["MAIN"] = "RegisterServiceRequest"]
                     /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                                    key_to_be_served, service_request, key_, 
-                                    key_g, key_c, key_ge, key_d, key >>
+                                    key_to_be_served, service_request, keys_, 
+                                    keys_g, keys_c, keys_ge, keys_d, keys >>
 
 DeleteKeysCall == /\ pc["MAIN"] = "DeleteKeysCall"
-                  /\ /\ key_d' = [key_d EXCEPT !["MAIN"] = GrpcViewingKey]
+                  /\ /\ keys_d' = [keys_d EXCEPT !["MAIN"] = GrpcViewingKeys]
                      /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "delete_keys",
                                                                 pc        |->  "End",
-                                                                key_d     |->  key_d["MAIN"] ] >>
+                                                                keys_d    |->  keys_d["MAIN"] ] >>
                                                             \o stack["MAIN"]]
                   /\ pc' = [pc EXCEPT !["MAIN"] = "DeleteServiceRequest"]
                   /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                                  key_to_be_served, service_request, key_, 
-                                  key_g, key_c, key_ge, key_r, key >>
+                                  key_to_be_served, service_request, keys_, 
+                                  keys_g, keys_c, keys_ge, keys_r, keys >>
 
 ClearResultsCall == /\ pc["MAIN"] = "ClearResultsCall"
-                    /\ /\ key_c' = [key_c EXCEPT !["MAIN"] = GrpcViewingKey]
+                    /\ /\ keys_c' = [keys_c EXCEPT !["MAIN"] = GrpcViewingKeys]
                        /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "clear_results",
                                                                   pc        |->  "End",
-                                                                  key_c     |->  key_c["MAIN"] ] >>
+                                                                  keys_c    |->  keys_c["MAIN"] ] >>
                                                               \o stack["MAIN"]]
                     /\ pc' = [pc EXCEPT !["MAIN"] = "ClearServiceRequest"]
                     /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                                    key_to_be_served, service_request, key_, 
-                                    key_g, key_ge, key_r, key_d, key >>
+                                    key_to_be_served, service_request, keys_, 
+                                    keys_g, keys_ge, keys_r, keys_d, keys >>
 
 ScanCall == /\ pc["MAIN"] = "ScanCall"
-            /\ /\ key' = [key EXCEPT !["MAIN"] = GrpcViewingKey]
+            /\ /\ keys' = [keys EXCEPT !["MAIN"] = GrpcViewingKeys]
                /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "scan",
                                                           pc        |->  "End",
-                                                          key       |->  key["MAIN"] ] >>
+                                                          keys      |->  keys["MAIN"] ] >>
                                                       \o stack["MAIN"]]
             /\ pc' = [pc EXCEPT !["MAIN"] = "RegisterServiceRequestFromScan"]
             /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                            key_to_be_served, service_request, key_, key_g, 
-                            key_c, key_ge, key_r, key_d >>
+                            key_to_be_served, service_request, keys_, keys_g, 
+                            keys_c, keys_ge, keys_r, keys_d >>
 
 GetStatusCall == /\ pc["MAIN"] = "GetStatusCall"
-                 /\ /\ key_ge' = [key_ge EXCEPT !["MAIN"] = GrpcViewingKey]
+                 /\ /\ keys_ge' = [keys_ge EXCEPT !["MAIN"] = GrpcViewingKeys]
                     /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "get_status",
                                                                pc        |->  "End",
-                                                               key_ge    |->  key_ge["MAIN"] ] >>
+                                                               keys_ge   |->  keys_ge["MAIN"] ] >>
                                                            \o stack["MAIN"]]
                  /\ pc' = [pc EXCEPT !["MAIN"] = "StatusServiceRequest"]
                  /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                                 key_to_be_served, service_request, key_, 
-                                 key_g, key_c, key_r, key_d, key >>
+                                 key_to_be_served, service_request, keys_, 
+                                 keys_g, keys_c, keys_r, keys_d, keys >>
 
 End == /\ pc["MAIN"] = "End"
        /\ TRUE
        /\ pc' = [pc EXCEPT !["MAIN"] = "Done"]
        /\ UNCHANGED << scan_tasks, response, scan_task_status, 
-                       key_to_be_served, service_request, stack, key_, key_g, 
-                       key_c, key_ge, key_r, key_d, key >>
+                       key_to_be_served, service_request, stack, keys_, keys_g, 
+                       keys_c, keys_ge, keys_r, keys_d, keys >>
 
 Main == ConfigGuard \/ FromZebradConfig \/ ListeningGuard \/ ListeningMode
            \/ GetInfoCall \/ GetResultsCall \/ RegisterKeysCall
@@ -656,5 +699,5 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 =============================================================================
 \* Modification History
-\* Last modified Wed Mar 06 13:53:24 UYT 2024 by alfredo
+\* Last modified Thu Mar 07 18:13:46 UYT 2024 by alfredo
 \* Created Wed Feb 21 10:40:53 UYT 2024 by alfredo
