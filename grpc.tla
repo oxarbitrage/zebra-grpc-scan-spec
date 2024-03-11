@@ -347,13 +347,13 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "e23a373d" /\ chksum(tla) = "ca9f015")
-\* Parameter keys of procedure add_config_keys at line 94 col 27 changed to keys_
-\* Parameter keys of procedure get_results at line 113 col 23 changed to keys_g
-\* Parameter keys of procedure clear_results at line 124 col 25 changed to keys_c
-\* Parameter keys of procedure get_status at line 135 col 22 changed to keys_ge
-\* Parameter keys of procedure register_keys at line 146 col 25 changed to keys_r
-\* Parameter keys of procedure delete_keys at line 157 col 23 changed to keys_d
+\* BEGIN TRANSLATION (chksum(pcal) = "f010451" /\ chksum(tla) = "92dbe62c")
+\* Parameter keys of procedure add_config_keys at line 123 col 27 changed to keys_
+\* Parameter keys of procedure get_results at line 144 col 23 changed to keys_g
+\* Parameter keys of procedure clear_results at line 155 col 25 changed to keys_c
+\* Parameter keys of procedure get_status at line 166 col 22 changed to keys_ge
+\* Parameter keys of procedure register_keys at line 177 col 25 changed to keys_r
+\* Parameter keys of procedure delete_keys at line 188 col 23 changed to keys_d
 CONSTANT defaultInitValue
 VARIABLES scan_tasks, response, scan_task_status, key_to_be_served, 
           service_request, number_of_batches, counter, pc, stack
@@ -719,7 +719,6 @@ GetScanTasks == /\ pc["SCAN TASK"] = "GetScanTasks"
                                 keys_g, keys_c, keys_ge, keys_r, keys_d, keys >>
 
 ScanTask == /\ pc["SCAN TASK"] = "ScanTask"
-            /\ PrintT(Cardinality(scan_tasks))
             /\ IF Cardinality(scan_tasks) > MaxScanTasks
                   THEN /\ pc' = [pc EXCEPT !["SCAN TASK"] = "BoundError"]
                   ELSE /\ IF scan_task_status = "adding"
