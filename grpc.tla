@@ -1,4 +1,30 @@
 -------------------------------- MODULE grpc --------------------------------
+(***************************************************************************)
+(* Specification for the zebra-grpc crate design and it's relationship     *)
+(* with the zebra-scanner crate and zebrad configuration file.             *)
+(* It can handle the scan task functionality and how the grpc methods can  *)
+(* add or delete information to the scanning database.                     *)
+(*                                                                         *)
+(* The spec is written in PlusCal and it's meant to be used with the TLC   *)
+(* model checker.                                                          *)
+(*                                                                         *)
+(* The spec is divided in two parts: the first part is the PlusCal spec    *)
+(* and the second part is translated TLA+ code.                            *)
+(*                                                                         *)
+(* The spec is divided in the following sections:                          *)
+(*                                                                         *)
+(* 1. Configuration Constants                                              *)
+(* 2. Global Variables                                                     *)         
+(* 3. Type Invariants                                                      *)
+(* 4. Utility Functions                                                    *)
+(* 5. gRPC Methods                                                         *)
+(* 6. Services Process                                                     *)
+(* 7. Scan Task Process                                                    *)
+(* 8. Main Program Process                                                 *)
+(*                                                                         *)
+(* For more information visit:                                             *)
+(* https://github.com/oxarbitrage/zebra-grpc-scan-spec)                    *)
+(***************************************************************************)
 EXTENDS TLC, Integers, Sequences, Randomization, FiniteSets
 
 \* CONFIGURATION CONSTANTS:
@@ -9,17 +35,18 @@ CONSTANT ConfigViewingKeys
 \* We have 3 batches of keys so we can try different combinations, including
 \* duplicated keys.
 
-\* A set of keys as strings to be added to the scan task by calling grpc methods.
+\* A set of keys as strings.
 CONSTANT GrpcViewingKeysBatch1
-\* A second set of keys as strings to be added to the scan task by calling grpc methods.
+\* A second set of keys as strings.
 CONSTANT GrpcViewingKeysBatch2
-\* A third of keys as strings to be added to the scan task by calling grpc methods.
+\* A third set of keys as strings.
 CONSTANT GrpcViewingKeysBatch3
-
+\* The maximum number of scan tasks that can be added to the scan task set.
 CONSTANT MaxScanTasks
 
 \* GLOBAL VARIABLES:
 
+\* A sequence of batches with keys to call grpc methods. Currently we have 3 batches.
 GrpcViewingKeys == <<GrpcViewingKeysBatch1, GrpcViewingKeysBatch2, GrpcViewingKeysBatch3>>
 
 \* A dummy response to an `Info` request.
@@ -59,7 +86,7 @@ variables
     \* The counter for the number of batches.
     counter = 1;
 
-\* The type invariants.
+\* THE TYPE INVARIANTS:
 define
   TypeInvariant ==
     \* The response is always in the STRING domain
@@ -71,6 +98,8 @@ define
     \* The service request is always in the service requests set.
     /\ service_request \in service_requests
 end define;
+
+\* UTILITY FUNCTIONS::
 
 \* Helper function to get the number of non empty batches the configuration has. 
 procedure get_config_number_of_batches()
@@ -100,6 +129,8 @@ begin
             return;
         end with;
 end procedure;
+
+\* GRPC METHODS:
 
 \* The `get_info` grpc method.
 procedure get_info()
@@ -186,7 +217,9 @@ begin
         end with;
 end procedure;
 
-\* The services process make requests to services and provide responses.
+\* SERVICES PROCESS:
+
+\* Listen for requests, send requests to scan task where is needed and provide responses.
 process services = "SERVICES"
 begin
     Services:
@@ -245,7 +278,9 @@ begin
         goto Services;
 end process;
 
-\* The scan task process, in charge of adding and removing tasks to the scan task set.
+\* SCAN TASK PROCESS:
+
+\* Listen for requests from the services process, add or remove tasks to the scan task set.
 process scantask = "SCAN TASK"
 variables inner_state = {};
 begin
@@ -258,12 +293,10 @@ begin
                 scan_task_status := "waiting";
         elsif scan_task_status = "adding" then
             Adding:
-                \*await scan_tasks = {};
                 inner_state := inner_state \union {key_to_be_served};
                 scan_task_status := "waiting";
         elsif scan_task_status = "deleting" then
             Deleting:
-                \*await scan_tasks # <<>>;
                 scan_tasks := scan_tasks \ {key_to_be_served};
                 scan_task_status := "waiting";
         end if;
@@ -274,7 +307,9 @@ begin
         goto ScanTask;
 end process;
 
-\* The main program process.
+\* MAIN PROCESS:
+
+\* Calls all grpc methods with the given keys.
 process Main = "MAIN"
 begin
     ConfigGuard:
