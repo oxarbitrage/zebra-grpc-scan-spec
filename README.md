@@ -1,4 +1,4 @@
-# The Zebra GRPC Scanner Spefification
+# The Zebra GRPC Scanner Specification
 
 ## Introduction
 
