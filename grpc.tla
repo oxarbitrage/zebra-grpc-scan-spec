@@ -25,7 +25,7 @@
 (* For more information visit:                                             *)
 (* https://github.com/oxarbitrage/zebra-grpc-scan-spec)                    *)
 (***************************************************************************)
-EXTENDS TLC, Integers, Sequences, Randomization, FiniteSets
+EXTENDS TLC, Integers, Sequences, Randomization, FiniteSets, Json
 
 \* CONFIGURATION CONSTANTS:
 
@@ -50,23 +50,23 @@ CONSTANT MaxScanTasks
 GrpcViewingKeys == <<GrpcViewingKeysBatch1, GrpcViewingKeysBatch2, GrpcViewingKeysBatch3>>
 
 \* A dummy response to an `Info` request.
-info_response == [saplingheight |-> 1]
+info_response == ToJson([saplingheight |-> 1])
 \* A random list of transations to be used as a `Results` response.
-results_response == [transactions |-> RandomSetOfSubsets(1, 3, 1..10)]
+results_response == ToJson([transactions |-> RandomSetOfSubsets(1, 3, 1..10)])
  \* An empty response to `Register`.
-register_response == [empty |-> {}]
+register_response == ToJson([empty |-> {}])
 \* An empty response to `Delete`.
-delete_response == [empty |-> {}]
+delete_response == ToJson([empty |-> {}])
 \* An empty response to `Clear`.
-clear_response == [empty |-> {}]
+clear_response == ToJson([empty |-> {}])
 \* An empty response to `Subscribe`. TODO: which should be a channel with updates.
-subscribe_response == [empty |-> {}]
+subscribe_response == ToJson([empty |-> {}])
 \* An empty response to `Status`. TODO: which should have some data from the scan task for the key.
-status_response == [empty |-> {}]
+status_response == ToJson([empty |-> {}])
 \* The set of statuses a scan task can be on at any given time.
 scan_task_statuses == {"waiting", "adding", "deleting"}
 \* The set of valid service requests.
-service_requests == {"waiting", "adding", "deleting"}
+service_requests == {"waiting", "info", "results", "clear", "status", "register", "delete", "subscribe"}
 
 (*--algorithm grpc
 variables
@@ -80,23 +80,30 @@ variables
        the scan task at a given instant, initially empty. *)
     key_to_be_served = "";
     \* The current service request flag.
-    service_request = "none";
+    service_request = "waiting";
     \* The number of batches the configuration has.
     number_of_batches = 0;
     \* The counter for the number of batches.
     counter = 1;
 
-\* THE TYPE INVARIANTS:
 define
-  TypeInvariant ==
-    \* The response is always in the STRING domain
-    /\ response \in STRING
-    \* The scan task status is always in the scan task statuses set.
-    /\ scan_task_status \in scan_task_statuses
-    \* The key to be served is always in the STRING domain.
-    /\ key_to_be_served \in STRING
-    \* The service request is always in the service requests set.
-    /\ service_request \in service_requests
+    \* THE TYPE INVARIANT:
+    TypeInvariant ==
+        \* The response is always in the STRING domain
+        /\ response \in STRING
+        \* The scan task status is always in the scan task statuses set.
+        /\ scan_task_status \in scan_task_statuses
+        \* The key to be served is always in the STRING domain.
+        /\ key_to_be_served \in STRING
+        \* The service request is always in the service requests set.
+        /\ service_request \in service_requests
+    \* LIVENESS PROPERTIES:
+    ScanTaskLiveness ==
+        \* The ScanTask process always reachs a waiting state.
+        <>(scan_task_status = "waiting")
+    ServiceLiveness ==
+        \* The Services process always reachs a waiting state.
+        <>(service_request = "waiting")
 end define;
 
 \* UTILITY FUNCTIONS::
@@ -273,6 +280,8 @@ begin
                     response := "Error: key not found.";
                 end if;
         end if;
+    ClearRequestFlag:
+        service_request := "waiting";
     \* Make the process loops forever.
     ServicesLoop:
         goto Services;
@@ -281,7 +290,7 @@ end process;
 \* SCAN TASK PROCESS:
 
 \* Listen for requests from the services process, add or remove tasks to the scan task set.
-process scantask = "SCAN TASK"
+fair process scantask = "SCAN TASK"
 variables inner_state = {};
 begin
     GetScanTasks:
@@ -347,13 +356,13 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "f010451" /\ chksum(tla) = "92dbe62c")
-\* Parameter keys of procedure add_config_keys at line 123 col 27 changed to keys_
-\* Parameter keys of procedure get_results at line 144 col 23 changed to keys_g
-\* Parameter keys of procedure clear_results at line 155 col 25 changed to keys_c
-\* Parameter keys of procedure get_status at line 166 col 22 changed to keys_ge
-\* Parameter keys of procedure register_keys at line 177 col 25 changed to keys_r
-\* Parameter keys of procedure delete_keys at line 188 col 23 changed to keys_d
+\* BEGIN TRANSLATION (chksum(pcal) = "f6c668a3" /\ chksum(tla) = "48d8f3a2")
+\* Parameter keys of procedure add_config_keys at line 130 col 27 changed to keys_
+\* Parameter keys of procedure get_results at line 151 col 23 changed to keys_g
+\* Parameter keys of procedure clear_results at line 162 col 25 changed to keys_c
+\* Parameter keys of procedure get_status at line 173 col 22 changed to keys_ge
+\* Parameter keys of procedure register_keys at line 184 col 25 changed to keys_r
+\* Parameter keys of procedure delete_keys at line 195 col 23 changed to keys_d
 CONSTANT defaultInitValue
 VARIABLES scan_tasks, response, scan_task_status, key_to_be_served, 
           service_request, number_of_batches, counter, pc, stack
@@ -361,13 +370,20 @@ VARIABLES scan_tasks, response, scan_task_status, key_to_be_served,
 (* define statement *)
 TypeInvariant ==
 
-  /\ response \in STRING
+    /\ response \in STRING
 
-  /\ scan_task_status \in scan_task_statuses
+    /\ scan_task_status \in scan_task_statuses
 
-  /\ key_to_be_served \in STRING
+    /\ key_to_be_served \in STRING
 
-  /\ service_request \in service_requests
+    /\ service_request \in service_requests
+
+ScanTaskLiveness ==
+
+    <>(scan_task_status = "waiting")
+ServiceLiveness ==
+
+    <>(service_request = "waiting")
 
 VARIABLES keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, keys, inner_state
 
@@ -382,7 +398,7 @@ Init == (* Global variables *)
         /\ response = ""
         /\ scan_task_status = "waiting"
         /\ key_to_be_served = ""
-        /\ service_request = "none"
+        /\ service_request = "waiting"
         /\ number_of_batches = 0
         /\ counter = 1
         (* Procedure add_config_keys *)
@@ -608,7 +624,7 @@ Services == /\ pc["SERVICES"] = "Services"
                                                                          THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Delete"]
                                                                          ELSE /\ IF service_request = "subscribe"
                                                                                     THEN /\ pc' = [pc EXCEPT !["SERVICES"] = "Subscribe"]
-                                                                                    ELSE /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+                                                                                    ELSE /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
             /\ UNCHANGED << scan_tasks, response, scan_task_status, 
                             key_to_be_served, service_request, 
                             number_of_batches, counter, stack, keys_, keys_g, 
@@ -616,7 +632,7 @@ Services == /\ pc["SERVICES"] = "Services"
 
 Info == /\ pc["SERVICES"] = "Info"
         /\ response' = info_response
-        /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+        /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
         /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                         service_request, number_of_batches, counter, stack, 
                         keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, keys, 
@@ -626,7 +642,7 @@ Results == /\ pc["SERVICES"] = "Results"
            /\ IF key_to_be_served \in scan_tasks
                  THEN /\ response' = results_response
                  ELSE /\ response' = "Error: key not found."
-           /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+           /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
            /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                            service_request, number_of_batches, counter, stack, 
                            keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, 
@@ -636,7 +652,7 @@ Clear == /\ pc["SERVICES"] = "Clear"
          /\ IF key_to_be_served \in scan_tasks
                THEN /\ response' = clear_response
                ELSE /\ response' = "Error: key not found."
-         /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+         /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
          /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                          service_request, number_of_batches, counter, stack, 
                          keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, keys, 
@@ -646,7 +662,7 @@ Status == /\ pc["SERVICES"] = "Status"
           /\ IF key_to_be_served \in scan_tasks
                 THEN /\ response' = status_response
                 ELSE /\ response' = "Error: key not found."
-          /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+          /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
           /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                           service_request, number_of_batches, counter, stack, 
                           keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, keys, 
@@ -663,7 +679,7 @@ Register == /\ pc["SERVICES"] = "Register"
 
 KeyError == /\ pc["SERVICES"] = "KeyError"
             /\ response' = "Error: key already in scan task."
-            /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+            /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
             /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                             service_request, number_of_batches, counter, stack, 
                             keys_, keys_g, keys_c, keys_ge, keys_r, keys_d, 
@@ -672,7 +688,7 @@ KeyError == /\ pc["SERVICES"] = "KeyError"
 Success == /\ pc["SERVICES"] = "Success"
            /\ scan_task_status' = "adding"
            /\ response' = register_response
-           /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+           /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
            /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, 
                            number_of_batches, counter, stack, keys_, keys_g, 
                            keys_c, keys_ge, keys_r, keys_d, keys, inner_state >>
@@ -683,7 +699,7 @@ Delete == /\ pc["SERVICES"] = "Delete"
                      /\ response' = delete_response
                 ELSE /\ response' = "Error: key not found."
                      /\ UNCHANGED scan_task_status
-          /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+          /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
           /\ UNCHANGED << scan_tasks, key_to_be_served, service_request, 
                           number_of_batches, counter, stack, keys_, keys_g, 
                           keys_c, keys_ge, keys_r, keys_d, keys, inner_state >>
@@ -692,11 +708,19 @@ Subscribe == /\ pc["SERVICES"] = "Subscribe"
              /\ IF key_to_be_served \in scan_tasks
                    THEN /\ response' = subscribe_response
                    ELSE /\ response' = "Error: key not found."
-             /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+             /\ pc' = [pc EXCEPT !["SERVICES"] = "ClearRequestFlag"]
              /\ UNCHANGED << scan_tasks, scan_task_status, key_to_be_served, 
                              service_request, number_of_batches, counter, 
                              stack, keys_, keys_g, keys_c, keys_ge, keys_r, 
                              keys_d, keys, inner_state >>
+
+ClearRequestFlag == /\ pc["SERVICES"] = "ClearRequestFlag"
+                    /\ service_request' = "waiting"
+                    /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
+                    /\ UNCHANGED << scan_tasks, response, scan_task_status, 
+                                    key_to_be_served, number_of_batches, 
+                                    counter, stack, keys_, keys_g, keys_c, 
+                                    keys_ge, keys_r, keys_d, keys, inner_state >>
 
 ServicesLoop == /\ pc["SERVICES"] = "ServicesLoop"
                 /\ pc' = [pc EXCEPT !["SERVICES"] = "Services"]
@@ -708,7 +732,7 @@ ServicesLoop == /\ pc["SERVICES"] = "ServicesLoop"
 
 services == Services \/ Info \/ Results \/ Clear \/ Status \/ Register
                \/ KeyError \/ Success \/ Delete \/ Subscribe
-               \/ ServicesLoop
+               \/ ClearRequestFlag \/ ServicesLoop
 
 GetScanTasks == /\ pc["SCAN TASK"] = "GetScanTasks"
                 /\ inner_state' = scan_tasks
@@ -947,7 +971,8 @@ Next == services \/ scantask \/ Main
                                      \/ delete_keys(self) \/ scan(self))
            \/ Terminating
 
-Spec == Init /\ [][Next]_vars
+Spec == /\ Init /\ [][Next]_vars
+        /\ WF_vars(scantask)
 
 Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
