@@ -16,11 +16,12 @@
 (* 1. Configuration Constants                                              *)
 (* 2. Global Variables                                                     *)         
 (* 3. Type Invariants                                                      *)
-(* 4. Utility Functions                                                    *)
-(* 5. gRPC Methods                                                         *)
-(* 6. Services Process                                                     *)
-(* 7. Scan Task Process                                                    *)
-(* 8. Main Program Process                                                 *)
+(* 4. Liveness properties                                                  *)
+(* 5. Utility Functions                                                    *)
+(* 6. gRPC Methods                                                         *)
+(* 7. Services Process                                                     *)
+(* 8. Scan Task Process                                                    *)
+(* 9. Main Program Process                                                 *)
 (*                                                                         *)
 (* For more information visit:                                             *)
 (* https://github.com/oxarbitrage/zebra-grpc-scan-spec)                    *)
@@ -356,13 +357,13 @@ begin
         
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "f6c668a3" /\ chksum(tla) = "48d8f3a2")
-\* Parameter keys of procedure add_config_keys at line 130 col 27 changed to keys_
-\* Parameter keys of procedure get_results at line 151 col 23 changed to keys_g
-\* Parameter keys of procedure clear_results at line 162 col 25 changed to keys_c
-\* Parameter keys of procedure get_status at line 173 col 22 changed to keys_ge
-\* Parameter keys of procedure register_keys at line 184 col 25 changed to keys_r
-\* Parameter keys of procedure delete_keys at line 195 col 23 changed to keys_d
+\* BEGIN TRANSLATION (chksum(pcal) = "f6c668a3" /\ chksum(tla) = "868960ef")
+\* Parameter keys of procedure add_config_keys at line 131 col 27 changed to keys_
+\* Parameter keys of procedure get_results at line 152 col 23 changed to keys_g
+\* Parameter keys of procedure clear_results at line 163 col 25 changed to keys_c
+\* Parameter keys of procedure get_status at line 174 col 22 changed to keys_ge
+\* Parameter keys of procedure register_keys at line 185 col 25 changed to keys_r
+\* Parameter keys of procedure delete_keys at line 196 col 23 changed to keys_d
 CONSTANT defaultInitValue
 VARIABLES scan_tasks, response, scan_task_status, key_to_be_served, 
           service_request, number_of_batches, counter, pc, stack
