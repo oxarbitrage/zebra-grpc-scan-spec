@@ -33,16 +33,42 @@ variables
     service_request = StatusWaiting;
     \* The current status of the scan task, initially listening for requests.
     scan_task_status = StatusWaiting;
-    \* The set of scan tasks that are currently being processed.
+    \* The set of scan tasks that are currently being processed, initially empty.
     scan_tasks = {};
     \* The key that will be served to the client after a create account request.
     key_to_be_served = "";
     \* The block that will be served to the client after a scan task finds a relevant block, initially empty.
     block_to_be_served = [height |-> 0, hash |-> "000000"];
-    \* The accounts that are currently being processed, initially empty.
-    accounts = <<[account_id |-> 0, ufvk |-> ""]>>;
-    \* The blocks that are currently being processed, initially empty.
-    blocks = <<>>;
+    \* The set of accounts that in the memory wallet, initially empty.
+    accounts = {};
+    \* The set of blocks in the memory wallet, initially empty.
+    blocks = {};
+    \* Keep track of the last inserted accouint id.
+    last_account_id = 0;
+
+define
+    \* Ensure that whenever a block is available, it eventually gets inserted into the memory wallet.
+    LIVENESS_BLOCK_INSERTION ==
+        /\ block_to_be_served.height > 0
+        => <>(\A b \in blocks : b = block_to_be_served)
+    \* Ensure that an account is not added twice.
+    SAFETY_ACCOUNT_ADDITION ==
+        /\ \A a \in accounts : 
+                /\ a.account_id >= 0
+                /\ \A b \in accounts : b.account_id # a.account_id
+    \* Ensure that the account id is incremented properly.
+    SAFETY_ACCOUNT_ID_INCREMENT ==
+        /\ \A a, b \in accounts : a.account_id < b.account_id
+    \* Ensure that a block is not inserted multiple times.
+    SAFETY_BLOCK_INSERTION ==
+        /\ \A b \in blocks : 
+                /\ b.height > 0
+                /\ \A c \in blocks : c.height # b.height
+    \* Ensure that the service request always return to listening after adding.
+    SERVICE_REQUEST_TRANSITION ==
+        /\ service_request = StatusAdding 
+            => <> (service_request = StatusWaiting)
+end define;
 
 \* UTILITY PROCEDURES:
 
@@ -65,7 +91,7 @@ end procedure;
 procedure put_block_zcash_client_backend()
 begin
     PutBlockZcashClientBackend:
-        blocks := Append(blocks, block_to_be_served);
+        blocks := blocks \union {block_to_be_served};
 end procedure;
 
 \* SERVICES PROCESS:
@@ -96,20 +122,19 @@ end process;
 - Either send "scanned" blocks to the memory wallet or do nothing more.
 *)
 process scantask = "SCAN TASK"
-variables inner_state = {}, inner_accounts = <<>>, inner_blocks = <<>>;
+variables inner_state = {}, inner_accounts = {}, inner_blocks = {}, inner_last_account_id = 0;
 begin
-    GetScanTasks:
+    GetGlobals:
         inner_state := scan_tasks;
-    GetAccounts:
         inner_accounts := accounts;
-    GetBlocks:
-        inner_blocks := blocks;
+        inner_last_account_id := last_account_id;
     ScanTask:
         if scan_task_status = StatusAdding then
-            AddingAccount:          
-                accounts := Append(inner_accounts, [account_id |-> inner_accounts[Len(inner_accounts)].account_id + 1, ufvk |-> key_to_be_served]);
-                inner_state := inner_state \union {key_to_be_served};    
+            AddingAccount:
+                accounts := inner_accounts \union {[account_id |-> last_account_id + 1, ufvk |-> key_to_be_served]};
+                scan_tasks := inner_state \union {key_to_be_served};
                 scan_task_status := StatusWaiting;
+                last_account_id := inner_last_account_id + 1;
         end if;
     SendBlock:
         either
@@ -134,14 +159,39 @@ begin
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "2e1ecc63" /\ chksum(tla) = "d770e1ae")
+\* BEGIN TRANSLATION (chksum(pcal) = "3fe15824" /\ chksum(tla) = "e2d0cb1f")
 VARIABLES response, service_request, scan_task_status, scan_tasks, 
-          key_to_be_served, block_to_be_served, accounts, blocks, pc, stack, 
-          inner_state, inner_accounts, inner_blocks
+          key_to_be_served, block_to_be_served, accounts, blocks, 
+          last_account_id, pc, stack
+
+(* define statement *)
+LIVENESS_BLOCK_INSERTION ==
+    /\ block_to_be_served.height > 0
+    => <>(\A b \in blocks : b = block_to_be_served)
+
+SAFETY_ACCOUNT_ADDITION ==
+    /\ \A a \in accounts :
+            /\ a.account_id >= 0
+            /\ \A b \in accounts : b.account_id # a.account_id
+
+SAFETY_ACCOUNT_ID_INCREMENT ==
+    /\ \A a, b \in accounts : a.account_id < b.account_id
+
+SAFETY_BLOCK_INSERTION ==
+    /\ \A b \in blocks :
+            /\ b.height > 0
+            /\ \A c \in blocks : c.height # b.height
+
+SERVICE_REQUEST_TRANSITION ==
+    /\ service_request = StatusAdding
+        => <> (service_request = StatusWaiting)
+
+VARIABLES inner_state, inner_accounts, inner_blocks, inner_last_account_id
 
 vars == << response, service_request, scan_task_status, scan_tasks, 
-           key_to_be_served, block_to_be_served, accounts, blocks, pc, stack, 
-           inner_state, inner_accounts, inner_blocks >>
+           key_to_be_served, block_to_be_served, accounts, blocks, 
+           last_account_id, pc, stack, inner_state, inner_accounts, 
+           inner_blocks, inner_last_account_id >>
 
 ProcSet == {"SERVICES"} \cup {"SCAN TASK"} \cup {"MAIN"}
 
@@ -152,15 +202,17 @@ Init == (* Global variables *)
         /\ scan_tasks = {}
         /\ key_to_be_served = ""
         /\ block_to_be_served = [height |-> 0, hash |-> "000000"]
-        /\ accounts = <<[account_id |-> 0, ufvk |-> ""]>>
-        /\ blocks = <<>>
+        /\ accounts = {}
+        /\ blocks = {}
+        /\ last_account_id = 0
         (* Process scantask *)
         /\ inner_state = {}
-        /\ inner_accounts = <<>>
-        /\ inner_blocks = <<>>
+        /\ inner_accounts = {}
+        /\ inner_blocks = {}
+        /\ inner_last_account_id = 0
         /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = "SERVICES" -> "Services"
-                                        [] self = "SCAN TASK" -> "GetScanTasks"
+                                        [] self = "SCAN TASK" -> "GetGlobals"
                                         [] self = "MAIN" -> "CreteAccountCall"]
 
 CreateAccountGrpc(self) == /\ pc[self] = "CreateAccountGrpc"
@@ -169,8 +221,9 @@ CreateAccountGrpc(self) == /\ pc[self] = "CreateAccountGrpc"
                            /\ UNCHANGED << response, scan_task_status, 
                                            scan_tasks, key_to_be_served, 
                                            block_to_be_served, accounts, 
-                                           blocks, stack, inner_state, 
-                                           inner_accounts, inner_blocks >>
+                                           blocks, last_account_id, stack, 
+                                           inner_state, inner_accounts, 
+                                           inner_blocks, inner_last_account_id >>
 
 create_account_grpc(self) == CreateAccountGrpc(self)
 
@@ -184,24 +237,27 @@ CreateAccountZcashClientBackend(self) == /\ pc[self] = "CreateAccountZcashClient
                                                          key_to_be_served, 
                                                          block_to_be_served, 
                                                          accounts, blocks, 
+                                                         last_account_id, 
                                                          inner_state, 
                                                          inner_accounts, 
-                                                         inner_blocks >>
+                                                         inner_blocks, 
+                                                         inner_last_account_id >>
 
 create_account_zcash_client_backend(self) == CreateAccountZcashClientBackend(self)
 
 PutBlockZcashClientBackend(self) == /\ pc[self] = "PutBlockZcashClientBackend"
-                                    /\ blocks' = Append(blocks, block_to_be_served)
+                                    /\ blocks' = (blocks \union {block_to_be_served})
                                     /\ pc' = [pc EXCEPT ![self] = "Error"]
                                     /\ UNCHANGED << response, service_request, 
                                                     scan_task_status, 
                                                     scan_tasks, 
                                                     key_to_be_served, 
                                                     block_to_be_served, 
-                                                    accounts, stack, 
-                                                    inner_state, 
+                                                    accounts, last_account_id, 
+                                                    stack, inner_state, 
                                                     inner_accounts, 
-                                                    inner_blocks >>
+                                                    inner_blocks, 
+                                                    inner_last_account_id >>
 
 put_block_zcash_client_backend(self) == PutBlockZcashClientBackend(self)
 
@@ -211,16 +267,18 @@ Services == /\ pc["SERVICES"] = "Services"
                   ELSE /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
             /\ UNCHANGED << response, service_request, scan_task_status, 
                             scan_tasks, key_to_be_served, block_to_be_served, 
-                            accounts, blocks, stack, inner_state, 
-                            inner_accounts, inner_blocks >>
+                            accounts, blocks, last_account_id, stack, 
+                            inner_state, inner_accounts, inner_blocks, 
+                            inner_last_account_id >>
 
 CreateAccount == /\ pc["SERVICES"] = "CreateAccount"
                  /\ scan_task_status' = StatusAdding
                  /\ pc' = [pc EXCEPT !["SERVICES"] = "CallZcashClientBackend"]
                  /\ UNCHANGED << response, service_request, scan_tasks, 
                                  key_to_be_served, block_to_be_served, 
-                                 accounts, blocks, stack, inner_state, 
-                                 inner_accounts, inner_blocks >>
+                                 accounts, blocks, last_account_id, stack, 
+                                 inner_state, inner_accounts, inner_blocks, 
+                                 inner_last_account_id >>
 
 CallZcashClientBackend == /\ pc["SERVICES"] = "CallZcashClientBackend"
                           /\ stack' = [stack EXCEPT !["SERVICES"] = << [ procedure |->  "create_account_zcash_client_backend",
@@ -230,49 +288,39 @@ CallZcashClientBackend == /\ pc["SERVICES"] = "CallZcashClientBackend"
                           /\ UNCHANGED << response, service_request, 
                                           scan_task_status, scan_tasks, 
                                           key_to_be_served, block_to_be_served, 
-                                          accounts, blocks, inner_state, 
-                                          inner_accounts, inner_blocks >>
+                                          accounts, blocks, last_account_id, 
+                                          inner_state, inner_accounts, 
+                                          inner_blocks, inner_last_account_id >>
 
 SendKey == /\ pc["SERVICES"] = "SendKey"
            /\ key_to_be_served' = response
            /\ pc' = [pc EXCEPT !["SERVICES"] = "ServicesLoop"]
            /\ UNCHANGED << response, service_request, scan_task_status, 
                            scan_tasks, block_to_be_served, accounts, blocks, 
-                           stack, inner_state, inner_accounts, inner_blocks >>
+                           last_account_id, stack, inner_state, inner_accounts, 
+                           inner_blocks, inner_last_account_id >>
 
 ServicesLoop == /\ pc["SERVICES"] = "ServicesLoop"
                 /\ pc' = [pc EXCEPT !["SERVICES"] = "Services"]
                 /\ UNCHANGED << response, service_request, scan_task_status, 
                                 scan_tasks, key_to_be_served, 
-                                block_to_be_served, accounts, blocks, stack, 
-                                inner_state, inner_accounts, inner_blocks >>
+                                block_to_be_served, accounts, blocks, 
+                                last_account_id, stack, inner_state, 
+                                inner_accounts, inner_blocks, 
+                                inner_last_account_id >>
 
 services == Services \/ CreateAccount \/ CallZcashClientBackend \/ SendKey
                \/ ServicesLoop
 
-GetScanTasks == /\ pc["SCAN TASK"] = "GetScanTasks"
-                /\ inner_state' = scan_tasks
-                /\ pc' = [pc EXCEPT !["SCAN TASK"] = "GetAccounts"]
-                /\ UNCHANGED << response, service_request, scan_task_status, 
-                                scan_tasks, key_to_be_served, 
-                                block_to_be_served, accounts, blocks, stack, 
-                                inner_accounts, inner_blocks >>
-
-GetAccounts == /\ pc["SCAN TASK"] = "GetAccounts"
-               /\ inner_accounts' = accounts
-               /\ pc' = [pc EXCEPT !["SCAN TASK"] = "GetBlocks"]
-               /\ UNCHANGED << response, service_request, scan_task_status, 
-                               scan_tasks, key_to_be_served, 
-                               block_to_be_served, accounts, blocks, stack, 
-                               inner_state, inner_blocks >>
-
-GetBlocks == /\ pc["SCAN TASK"] = "GetBlocks"
-             /\ inner_blocks' = blocks
-             /\ pc' = [pc EXCEPT !["SCAN TASK"] = "ScanTask"]
-             /\ UNCHANGED << response, service_request, scan_task_status, 
-                             scan_tasks, key_to_be_served, block_to_be_served, 
-                             accounts, blocks, stack, inner_state, 
-                             inner_accounts >>
+GetGlobals == /\ pc["SCAN TASK"] = "GetGlobals"
+              /\ inner_state' = scan_tasks
+              /\ inner_accounts' = accounts
+              /\ inner_last_account_id' = last_account_id
+              /\ pc' = [pc EXCEPT !["SCAN TASK"] = "ScanTask"]
+              /\ UNCHANGED << response, service_request, scan_task_status, 
+                              scan_tasks, key_to_be_served, block_to_be_served, 
+                              accounts, blocks, last_account_id, stack, 
+                              inner_blocks >>
 
 ScanTask == /\ pc["SCAN TASK"] = "ScanTask"
             /\ IF scan_task_status = StatusAdding
@@ -280,17 +328,20 @@ ScanTask == /\ pc["SCAN TASK"] = "ScanTask"
                   ELSE /\ pc' = [pc EXCEPT !["SCAN TASK"] = "SendBlock"]
             /\ UNCHANGED << response, service_request, scan_task_status, 
                             scan_tasks, key_to_be_served, block_to_be_served, 
-                            accounts, blocks, stack, inner_state, 
-                            inner_accounts, inner_blocks >>
+                            accounts, blocks, last_account_id, stack, 
+                            inner_state, inner_accounts, inner_blocks, 
+                            inner_last_account_id >>
 
 AddingAccount == /\ pc["SCAN TASK"] = "AddingAccount"
-                 /\ accounts' = Append(inner_accounts, [account_id |-> inner_accounts[Len(inner_accounts)].account_id + 1, ufvk |-> key_to_be_served])
-                 /\ inner_state' = (inner_state \union {key_to_be_served})
+                 /\ accounts' = (inner_accounts \union {[account_id |-> last_account_id + 1, ufvk |-> key_to_be_served]})
+                 /\ scan_tasks' = (inner_state \union {key_to_be_served})
                  /\ scan_task_status' = StatusWaiting
+                 /\ last_account_id' = inner_last_account_id + 1
                  /\ pc' = [pc EXCEPT !["SCAN TASK"] = "SendBlock"]
-                 /\ UNCHANGED << response, service_request, scan_tasks, 
-                                 key_to_be_served, block_to_be_served, blocks, 
-                                 stack, inner_accounts, inner_blocks >>
+                 /\ UNCHANGED << response, service_request, key_to_be_served, 
+                                 block_to_be_served, blocks, stack, 
+                                 inner_state, inner_accounts, inner_blocks, 
+                                 inner_last_account_id >>
 
 SendBlock == /\ pc["SCAN TASK"] = "SendBlock"
              /\ \/ /\ block_to_be_served' = [height |-> 1, hash |-> "111111"]
@@ -303,17 +354,20 @@ SendBlock == /\ pc["SCAN TASK"] = "SendBlock"
                    /\ UNCHANGED <<block_to_be_served, stack>>
              /\ UNCHANGED << response, service_request, scan_task_status, 
                              scan_tasks, key_to_be_served, accounts, blocks, 
-                             inner_state, inner_accounts, inner_blocks >>
+                             last_account_id, inner_state, inner_accounts, 
+                             inner_blocks, inner_last_account_id >>
 
 ScanTaskLoop == /\ pc["SCAN TASK"] = "ScanTaskLoop"
                 /\ pc' = [pc EXCEPT !["SCAN TASK"] = "ScanTask"]
                 /\ UNCHANGED << response, service_request, scan_task_status, 
                                 scan_tasks, key_to_be_served, 
-                                block_to_be_served, accounts, blocks, stack, 
-                                inner_state, inner_accounts, inner_blocks >>
+                                block_to_be_served, accounts, blocks, 
+                                last_account_id, stack, inner_state, 
+                                inner_accounts, inner_blocks, 
+                                inner_last_account_id >>
 
-scantask == GetScanTasks \/ GetAccounts \/ GetBlocks \/ ScanTask
-               \/ AddingAccount \/ SendBlock \/ ScanTaskLoop
+scantask == GetGlobals \/ ScanTask \/ AddingAccount \/ SendBlock
+               \/ ScanTaskLoop
 
 CreteAccountCall == /\ pc["MAIN"] = "CreteAccountCall"
                     /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "create_account_grpc",
@@ -323,15 +377,17 @@ CreteAccountCall == /\ pc["MAIN"] = "CreteAccountCall"
                     /\ UNCHANGED << response, service_request, 
                                     scan_task_status, scan_tasks, 
                                     key_to_be_served, block_to_be_served, 
-                                    accounts, blocks, inner_state, 
-                                    inner_accounts, inner_blocks >>
+                                    accounts, blocks, last_account_id, 
+                                    inner_state, inner_accounts, inner_blocks, 
+                                    inner_last_account_id >>
 
 End == /\ pc["MAIN"] = "End"
        /\ TRUE
        /\ pc' = [pc EXCEPT !["MAIN"] = "Done"]
        /\ UNCHANGED << response, service_request, scan_task_status, scan_tasks, 
                        key_to_be_served, block_to_be_served, accounts, blocks, 
-                       stack, inner_state, inner_accounts, inner_blocks >>
+                       last_account_id, stack, inner_state, inner_accounts, 
+                       inner_blocks, inner_last_account_id >>
 
 Main == CreteAccountCall \/ End
 
