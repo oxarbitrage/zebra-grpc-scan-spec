@@ -2,15 +2,17 @@
 
 ## Introduction
 
-This document outlines a potential design for integrating Zebra with the zcash_client_backend, aiming to position zebrad as a replacement for zcashd concerning wallet functionality.
+This document outlines a potential design for integrating Zebra with the `zcash_client_backend`, aiming to position zebrad as a replacement for zcashd concerning external clienbt functionality.
 
 The outlined design is subject to further refinement and iteration, as it represents uncharted territory with room for modifications or complete reconsideration based on input from involved design and development teams.
 
+**This design is not a plan to develop a wallet in Zebra** but a possible path to follow to integrate `zcash_client_backend` memory wallet functionality with Zebra.
+
 ## Motivation
 
-As the transition away from zcashd draws near, zebrad emerges as the natural successor. However, wallet functionality, specifically the librustzcash library with the `zcash_client_backend`, must persist.
+As the transition away from zcashd draws near, zebrad emerges as the natural successor. However, external client functionality, specifically the librustzcash library with the `zcash_client_backend`, must persist.
 
-With the development of gRPC functionality and scanning capabilities in Zebra ([learn more](grpc.md)), new opportunities for having wallet support within Zebra arise. To optimize resource utilization, integrating these components rather than building something entirely new is preferred. This specification leverages components from both sides to create a bridge between them.
+With the development of gRPC functionality and scanning capabilities in Zebra ([learn more](grpc.md)), new opportunities for having external client support within Zebra arise. To optimize resource utilization, integrating these components rather than building something entirely new is preferred. This specification leverages components from both sides to create a bridge between them.
 
 ## Design diagram
 
