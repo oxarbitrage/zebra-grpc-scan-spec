@@ -8,8 +8,8 @@ This specification was written for the gRPC work carried out after the implement
 
 [Learn more](grpc.md)
 
-## Memory Wallet Integration Specification
+## External client support for Zebra Specification
 
-This specification outlines a potential design to facilitate the interaction between the memory wallet from `zcash_client_backend` and `zebrad`, as opposed to `zcashd`.
+This specification outlines a potential design to facilitate the interaction between the memory wallet code from `zcash_client_backend` and `zebrad`, as opposed to `zcashd` allowing external clients to potentially build a wallet software.
 
-[Learn more](wallet_integration.md)
+[Learn more](client_integration.md)

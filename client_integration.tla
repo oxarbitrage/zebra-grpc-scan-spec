@@ -1,6 +1,7 @@
-------------------------- MODULE wallet_integration -------------------------
+------------------------- MODULE client_integration -------------------------
 (***************************************************************************)
-(* The memory wallet integration with zebra specification.                 *)
+(* External client support for Zebra specification                         *)
+(*                                                                         *)
 (* The specs simulates a call to the create_account grpc method as a       *)
 (* starting point and then the grpc method calls the create_account        *)
 (* procedure in the zcash_client_backend side. The grpc method then sends  *)
@@ -24,7 +25,7 @@ StatusWaiting == "waiting"
 StatusAdding == "adding"
 CreateAccountServiceRequest == "create_account"
 
-(*--algorithm wallet_integration
+(*--algorithm client_integration
 
 variables
     \* A string that will be used as a response to any of the gRPC method calls, initially empty.
@@ -159,7 +160,7 @@ begin
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "3fe15824" /\ chksum(tla) = "e2d0cb1f")
+\* BEGIN TRANSLATION (chksum(pcal) = "f5e7e895" /\ chksum(tla) = "e2d0cb1f")
 VARIABLES response, service_request, scan_task_status, scan_tasks, 
           key_to_be_served, block_to_be_served, accounts, blocks, 
           last_account_id, pc, stack
