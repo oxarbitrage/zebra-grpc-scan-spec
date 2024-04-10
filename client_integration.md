@@ -1,4 +1,4 @@
-# Integration between the Memory Wallet and Zebra
+# Integration between the Zebra and the `zcash_client_backend` memory wallet interface
 
 ## Introduction
 
