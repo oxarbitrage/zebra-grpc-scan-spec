@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This document outlines a potential design for integrating Zebra with the `zcash_client_backend`, aiming to position zebrad as a replacement for zcashd concerning external clienbt functionality.
+This document outlines a potential design for integrating Zebra with the `zcash_client_backend`.
 
 The outlined design is subject to further refinement and iteration, as it represents uncharted territory with room for modifications or complete reconsideration based on input from involved design and development teams.
 
-**This design is not a plan to develop a wallet in Zebra** but a possible path to follow to integrate `zcash_client_backend` memory wallet functionality with Zebra.
+**This design is not a plan to develop a wallet in Zebra** but a possible path to follow to integrate `zcash_client_backend` memory wallet code with Zebra opening the possibility to develop external clients. These abstract external client might be a wallet but it is outside of the scope to plan that work here.
 
 ## Motivation
 
