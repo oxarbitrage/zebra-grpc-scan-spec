@@ -58,4 +58,4 @@ This specification simulates the integration of a memory wallet with Zebra, faci
 
 The simulation starts with a call to the `create_account_grpc` method from the main process. Subsequent processes handle service requests, interact with the `zcash_client_backend` crate, and manage scan tasks as required.
 
-[Wallet Integration Specification](wallet_integration.tla)
+[Client Integration Specification](client_integration.tla)
