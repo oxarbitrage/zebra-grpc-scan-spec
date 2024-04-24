@@ -12,15 +12,20 @@ The outlined design is subject to further refinement and iteration, as it repres
 
 As the transition away from zcashd draws near, zebrad emerges as the natural successor. However, external client functionality, specifically the librustzcash library with the `zcash_client_backend`, must persist.
 
-With the development of gRPC functionality and scanning capabilities in Zebra ([learn more](grpc.md)), new opportunities for having external client support within Zebra arise. To optimize resource utilization, integrating these components rather than building something entirely new is preferred. This specification leverages components from both sides to create a bridge between them.
+With the development of the scanning capabilities in Zebra ([learn more](grpc.md)), new opportunities for having external client support within Zebra arise. To optimize resource utilization, integrating these components rather than building something entirely new is preferred. This specification leverages components from both sides to create a bridge between them.
 
 ## Design diagram
 
 At the core of the system lies the `zcash_client_backend`, hosting the memory wallet code. The memory wallet has services for reading, writing data, and creating a new memory wallet database.
 
-On the Zebra side, the `zebra-grpc` component exposes various methods, including `create_account_grpc`, which invokes the Zebra internal version of `create_account`. This internal process ultimately leads to calling `create_account` in the `zcash_client_backend` crate.
+On the Zebra side, a feature will enable external client functionality when the node gets started. If the feature is enabled, `external-client` component will be imported which exposes various RPC methods, including `z_getnewaccount`, which invokes the `create_account` in the `zcash_client_backend` crate.
 
-When initiated, the `zebrad` binary triggers the `zebra-scan` and `Services` processes. `zebra-scan` initializes a scan task and, if necessary, dispatches scanned blocks to `insert_blocks`, which in turn invokes the `put_blocks` function in the `zcash_client_backend` crate.
+The `external-client` also do the scanning, this was originally the `zebra-scan` crate of Zebra where it's name was changed to `external-client` and additional functionality (RPC interface, etc) is added.
+
+An additional RPC method `z_getbalanceforaccount` was added to the spec for more clarity.
+
+- `z_getnewaccount`: https://zcash.github.io/rpc/z_getnewaccount.html
+- `z_getbalanceforaccount`: https://zcash.github.io/rpc/z_getbalanceforaccount.html
 
 ```mermaid
 flowchart TD
@@ -58,6 +63,8 @@ flowchart TD
 ```
 
 ## Specification
+
+**TODO: Update spec and summary below to last diagram version.**
 
 This specification simulates the integration of a memory wallet with Zebra, facilitating communication among various components, including the memory wallet, Zebra, and the `zcash_client_backend` crate.
 
