@@ -64,10 +64,8 @@ flowchart TD
 
 ## Specification
 
-**TODO: Update spec and summary below to last diagram version.**
-
 This specification simulates the integration of a memory wallet with Zebra, facilitating communication among various components, including the memory wallet, Zebra, and the `zcash_client_backend` crate.
 
-The simulation starts with a call to the `create_account_grpc` method from the main process. Subsequent processes handle service requests, interact with the `zcash_client_backend` crate, and manage scan tasks as required.
+The simulation starts with a call to the `z_getnewaccount` method from the main process. Subsequent processes handle service requests, interact with the `zcash_client_backend` crate, and manage scan tasks as required.
 
 [Client Integration Specification](client_integration.tla)
