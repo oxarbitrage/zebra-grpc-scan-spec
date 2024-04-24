@@ -41,7 +41,7 @@ flowchart TD
         read --> |Service call|get_wallet_summary
     end
     subgraph zebra [Zebra side]
-        zebrad{{zebrad}} <-->|Start Zebra with external client feature| external-client{{external-client}}
+        zebrad{{zebrad}} <-->|External client has access to zebra blocks database| external-client{{external-client}}
     end
     subgraph external [external-client side]
         external-client -->|Start scan task| scan_task[Scan Task]
