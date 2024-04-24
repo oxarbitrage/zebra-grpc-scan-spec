@@ -28,38 +28,45 @@ An additional RPC method `z_getbalanceforaccount` was added to the spec for more
 - `z_getbalanceforaccount`: https://zcash.github.io/rpc/z_getbalanceforaccount.html
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false}} }%%
 flowchart TD
-    subgraph librustzcash [librustzcash zcash_client_backend side]
+    subgraph librustzcash [zcash_client_backend side]
         zcash_client_backend{{zcash_client_backend}} --> |Host the memory wallet code|memory_wallet[Memory Wallet]
-        memory_wallet --> |Available services|read[(Read Service)]
-        memory_wallet --> |Available services|write[(Write Service)]
+        memory_wallet ----> |Available services|read[(Read Service)]
+        memory_wallet ----> |Available services|write[(Write Service)]
         memory_wallet --> |Available services|read[(Read Service)]
         memory_wallet --> |Create a new memory wallet database|new
         write --> |Service call|create_account_zcash_client_backend[create_account]
-        write --> |Service call|put_blocks
+        write ----> |Service call|put_blocks
         read --> |Service call|get_wallet_summary
     end
-    
-    zebrad{{zebrad}} -->|Start Zebra with external client feature| external-client{{external-client}}
-    external-client -->|Start scan task| scan_task[Scan Task]
-    external-client --> |RPC methods|rpc-methods[RPC Interface]
-    rpc-methods --> |Method|z_getbalanceforaccount
-    rpc-methods --> |Method|z_getnewaccount
-    z_getbalanceforaccount ----> |Call the memory wallet method|get_wallet_summary
-    z_getnewaccount ----> |Call the memory wallet method|create_account_zcash_client_backend
+    subgraph zebra [Zebra side]
+        zebrad{{zebrad}} <-->|Start Zebra with external client feature| external-client{{external-client}}
+    end
+    subgraph external [external-client side]
+        external-client -->|Start scan task| scan_task[Scan Task]
+        external-client --> |RPC methods|rpc-methods[RPC Interface]
+        rpc-methods --> |Method|z_getbalanceforaccount
+        rpc-methods --> |Method|z_getnewaccount
+        z_getbalanceforaccount --> |Call the memory wallet method|get_wallet_summary
+        z_getnewaccount --> |Call the memory wallet method|create_account_zcash_client_backend
 
-    external-client -->|Services available| Services
-    Services --> |Service call|Register[(Register Service)]
-    Services --> |Service call|Create[(Create Service)]
-    z_getnewaccount --> Create
-    Create --> |Internally|Register
-    scan_task -.-> |Send scanned blocks if any|insert_blocks
-    insert_blocks ----> |Call the memory wallet method|put_blocks
-    scan_task ----> |Initializes an empty memory wallet|init_mem_wallet
-    scan_task --> |Start scanning for a new key|start-scanning
-    init_mem_wallet ----> |Create a new memory wallet database|new
-    Register --> |Register service start scanning for key|start-scanning[Start scanning]
+        external-client -->|Services available| Services
+        Services --> |Service call|Register[(Register Service)]
+        Services --> |Service call|Create[(Create Service)]
+        z_getnewaccount --> Create
+        Create --> |Internally|Register
+        scan_task -.-> |Send scanned blocks if any|insert_blocks
+        insert_blocks --> |Call the memory wallet method|put_blocks
+        scan_task --> |Initializes an empty memory wallet|init_mem_wallet
+        scan_task --> |Start scanning for a new key|start-scanning
+        init_mem_wallet --> |Create a new memory wallet database|new
+        Register --> |Register service start scanning for key|start-scanning[Start scanning]
+    end
 
+    style librustzcash fill: white,font-weight: bold
+    style zebra fill: white
+    style external fill: white
 ```
 
 ## Specification
