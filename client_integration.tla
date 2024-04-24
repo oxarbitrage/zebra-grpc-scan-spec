@@ -2,11 +2,12 @@
 (***************************************************************************)
 (* External client support for Zebra specification                         *)
 (*                                                                         *)
-(* The specs simulates a call to the create_account grpc method as a       *)
-(* starting point and then the grpc method calls the create_account        *)
-(* procedure in the zcash_client_backend side. The grpc method then sends  *)
-(* the key to the memory wallet and the memory wallet adds the key to the  *)
-(* accounts set. The memory wallet then sends a block to the memory wallet *)
+(* The specs simulates a call to the z_getnewaccount rpc method as a       *)
+(* starting point which calls the create_account procedure in the          *)
+(* zcash_client_backend side. The rpc method then sends the key to the     *)
+(* scan task to start scanning and to the memory wallet who adds the key   *)
+(* to the accounts set.                                                    *)
+(* The zebra scanner eventually sends a block to the memory wallet         *)
 (* and the memory wallet adds the block to the blocks set.                 *)
 (*                                                                         *)
 (* The memory wallet is a simple algorithm that listens for requests and   *)
@@ -16,7 +17,7 @@
 (* "scanned" blocks to the memory wallet or does nothing more.             *)
 (*                                                                         *)
 (* The main process is the entry point of the model and calls the          *)
-(* create_account grpc method.                                             *)
+(* z_getnewaccount rpc method.                                             *)
 (*                                                                         *)
 (***************************************************************************)
 EXTENDS TLC, Integers, Sequences, Json, FiniteSets
@@ -78,12 +79,12 @@ end define;
 
 \* UTILITY PROCEDURES:
 
-(*-- Procedure to initiate the gRPC call for account creation.
+(*-- Procedure to initiate the RPC call for account creation.
     This sets the service_request flag to signal that an account creation request
     has been received and is being processed. *)
-procedure create_account_grpc()
+procedure z_getnewaccount()
 begin
-    CreateAccountGrpc:
+    GetNewAccountRPC:
         service_request := CreateAccountServiceRequest;
 end procedure;
 
@@ -160,14 +161,14 @@ end process;
 process Main = "MAIN"
 begin
     CreteAccountCall:
-        \* The grpc is the entry point of the model.
-        call create_account_grpc();
+        \* The RPC is the entry point of the model.
+        call z_getnewaccount();
     End:
         skip;
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "83f024a5" /\ chksum(tla) = "971a54d7")
+\* BEGIN TRANSLATION (chksum(pcal) = "33d228a9" /\ chksum(tla) = "4d91d949")
 VARIABLES response, service_request, scan_task_status, scan_tasks, 
           key_to_be_served, block_to_be_served, accounts, blocks, 
           last_account_id, pc, stack
@@ -228,17 +229,17 @@ Init == (* Global variables *)
                                         [] self = "SCAN TASK" -> "GetGlobals"
                                         [] self = "MAIN" -> "CreteAccountCall"]
 
-CreateAccountGrpc(self) == /\ pc[self] = "CreateAccountGrpc"
-                           /\ service_request' = CreateAccountServiceRequest
-                           /\ pc' = [pc EXCEPT ![self] = "Error"]
-                           /\ UNCHANGED << response, scan_task_status, 
-                                           scan_tasks, key_to_be_served, 
-                                           block_to_be_served, accounts, 
-                                           blocks, last_account_id, stack, 
-                                           inner_state, inner_accounts, 
-                                           inner_blocks, inner_last_account_id >>
+GetNewAccountRPC(self) == /\ pc[self] = "GetNewAccountRPC"
+                          /\ service_request' = CreateAccountServiceRequest
+                          /\ pc' = [pc EXCEPT ![self] = "Error"]
+                          /\ UNCHANGED << response, scan_task_status, 
+                                          scan_tasks, key_to_be_served, 
+                                          block_to_be_served, accounts, blocks, 
+                                          last_account_id, stack, inner_state, 
+                                          inner_accounts, inner_blocks, 
+                                          inner_last_account_id >>
 
-create_account_grpc(self) == CreateAccountGrpc(self)
+z_getnewaccount(self) == GetNewAccountRPC(self)
 
 CreateAccountZcashClientBackend(self) == /\ pc[self] = "CreateAccountZcashClientBackend"
                                          /\ response' = "zxviews..."
@@ -383,10 +384,10 @@ scantask == GetGlobals \/ ScanTask \/ AddingAccount \/ SendBlock
                \/ ScanTaskLoop
 
 CreteAccountCall == /\ pc["MAIN"] = "CreteAccountCall"
-                    /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "create_account_grpc",
+                    /\ stack' = [stack EXCEPT !["MAIN"] = << [ procedure |->  "z_getnewaccount",
                                                                pc        |->  "End" ] >>
                                                            \o stack["MAIN"]]
-                    /\ pc' = [pc EXCEPT !["MAIN"] = "CreateAccountGrpc"]
+                    /\ pc' = [pc EXCEPT !["MAIN"] = "GetNewAccountRPC"]
                     /\ UNCHANGED << response, service_request, 
                                     scan_task_status, scan_tasks, 
                                     key_to_be_served, block_to_be_served, 
@@ -409,7 +410,7 @@ Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
                /\ UNCHANGED vars
 
 Next == services \/ scantask \/ Main
-           \/ (\E self \in ProcSet:  \/ create_account_grpc(self)
+           \/ (\E self \in ProcSet:  \/ z_getnewaccount(self)
                                      \/ create_account_zcash_client_backend(self)
                                      \/ put_block_zcash_client_backend(self))
            \/ Terminating
