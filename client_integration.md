@@ -28,28 +28,33 @@ flowchart TD
         zcash_client_backend{{zcash_client_backend}} --> |Host the memory wallet code|memory_wallet[Memory Wallet]
         memory_wallet --> |Available services|read[(Read Service)]
         memory_wallet --> |Available services|write[(Write Service)]
+        memory_wallet --> |Available services|read[(Read Service)]
         memory_wallet --> |Create a new memory wallet database|new
         write --> |Service call|create_account_zcash_client_backend[create_account]
         write --> |Service call|put_blocks
+        read --> |Service call|get_wallet_summary
     end
-    zebra-grpc{{zebra-grpc}} --> |Available methods|methods[Methods]
-    methods --> |GRPC method|create_account_grpc[CreateAccount gRPC]
-    create_account_grpc --> |Calls the Zebra internal version of create_account|create_account_zebra
+    
+    zebrad{{zebrad}} -->|Start Zebra with external client feature| external-client{{external-client}}
+    external-client -->|Start scan task| scan_task[Scan Task]
+    external-client --> |RPC methods|rpc-methods[RPC Interface]
+    rpc-methods --> |Method|z_getbalanceforaccount
+    rpc-methods --> |Method|z_getnewaccount
+    z_getbalanceforaccount ----> |Call the memory wallet method|get_wallet_summary
+    z_getnewaccount ----> |Call the memory wallet method|create_account_zcash_client_backend
 
-    zebrad{{zebrad}} -->|Start Zebra| zebra-scan{{zebra-scan}}
-    zebra-scan -->|Start scan task| scan_task
-    zebra-scan -->|Services available| Services
+    external-client -->|Services available| Services
     Services --> |Service call|Register[(Register Service)]
     Services --> |Service call|Create[(Create Service)]
-    create_account_zebra[create_account] --> create_account_zcash_client_backend
-    create_account_zebra --> Create
+    z_getnewaccount --> Create
     Create --> |Internally|Register
     scan_task -.-> |Send scanned blocks if any|insert_blocks
-    insert_blocks ----> |Call the zcash_client_backend function|put_blocks
+    insert_blocks ----> |Call the memory wallet method|put_blocks
     scan_task ----> |Initializes an empty memory wallet|init_mem_wallet
+    scan_task --> |Start scanning for a new key|start-scanning
     init_mem_wallet ----> |Create a new memory wallet database|new
+    Register --> |Register service start scanning for key|start-scanning[Start scanning]
 
-    style create_account_grpc stroke:#238636,stroke-width:2px;
 ```
 
 ## Specification
