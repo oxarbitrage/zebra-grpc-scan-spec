@@ -63,10 +63,6 @@ flowchart TD
         init_mem_wallet --> |Create a new memory wallet database|new
         Register --> |Register service start scanning for key|start-scanning[Start scanning]
     end
-
-    style librustzcash fill: white,font-weight: bold
-    style zebra fill: white
-    style external fill: white
 ```
 
 ## Specification
