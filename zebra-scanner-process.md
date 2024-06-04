@@ -34,62 +34,21 @@ flowchart TD
 
 ## Target implementation
 
-We want the scanning related tasks to be isolated, that is, there should be a `scanner-binary` that is in charge of calling the never ending `spawn_init` function.
+We want the scanning related tasks to be isolated, that is, there should be a `zebra-scanner` binary that is in charge of calling the never ending `spawn_init` function.
 
-The `spawn_init` function should get the arguments `state`, `chain_tip_change`, `network` and `config` from a zebrad instance however i am not sure if this is directly possible.
-
+In an initial approach we are dealing only with the finalized part of the blockchain, this is blocks that are stored as permanent in the underlying RocksDB database zebra creates and updates while running. Interaction between the `zebra-scanner` binary and the data is only by the database. 
 
 ```mermaid
 flowchart TD
 
-    zebrad --> state
-    zebrad --> chain_tip_change
-    zebrad --> network
-    zebrad --> config
-    subgraph zebra-binary [&nbsp;]
-        scanner_binary --> spawn_init
-        state --> spawn_init
-        chain_tip_change --> spawn_init
-        network --> spawn_init
-        config --> spawn_init
-        spawn_init --> start
-        storage <---> start
-    end
+    existing_database --> read_state
+    existing_database --> database_tip
+    config --> scanner_binary
+    network --> config
+    other_config --> config 
+    scanner_binary --> spawn_init
+    read_state --> spawn_init
+    database_tip --> spawn_init
+    spawn_init --> start
+    storage <---> start
 ```
-
-## Types involved:
-
-- **state**:
-
-    ```
-    pub type State = Buffer<
-        BoxService<zebra_state::Request, zebra_state::Response, zebra_state::BoxError>,
-        zebra_state::Request,
-    >;
-    ```
-- **chain_tip_change**:
-    ```
-    pub struct ChainTipChange {
-        latest_chain_tip: LatestChainTip,
-        last_change_hash: Option<block::Hash>,
-        network: Network,
-    }
-    ```
-
-    where:
-
-    ```
-    pub struct LatestChainTip {
-        receiver: WatchReceiver<ChainTipData>,
-    }
-    ```
-- **network**:
-
-- **config**:
-
-- **storage**:
-
-## Possible approaches
-
-- 
-- 
